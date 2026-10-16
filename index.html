@@ -1,0 +1,431 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<!-- Ağ isteği YOK: CSP hiçbir ağ bağlantısına (veri gönderme, canlı bağlantı, harici betik/stil/görüntü) izin vermez; kayıtlar yalnızca bu tarayıcıda kalır. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
+<title>Ses kaydı toplama</title>
+<style>
+:root{color-scheme:light dark;--bg:#fafafa;--fg:#1c1c1c;--kart:#fff;--cizgi:#d6d6d6;--vurgu:#1a5fb4;--vurgu-yazi:#fff;--iyi:#1e8449;--kotu:#c0392b}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--kart:#222;--cizgi:#444;--vurgu:#62a0ea;--vurgu-yazi:#111;--iyi:#57e389;--kotu:#ff7b63}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:34rem;margin:0 auto;padding:16px}
+h1{font-size:1.35rem;margin:.2em 0 .6em}
+.kart{background:var(--kart);border:1px solid var(--cizgi);border-radius:12px;padding:16px;margin:12px 0}
+.gizli{display:none!important}
+button{font:inherit;padding:.8em 1.1em;border-radius:10px;border:1px solid var(--cizgi);background:var(--kart);color:var(--fg);min-height:48px}
+button.ana{background:var(--vurgu);color:var(--vurgu-yazi);border-color:var(--vurgu);font-weight:600}
+button.kayit{background:var(--kotu);color:#fff;border-color:var(--kotu);font-weight:700}
+button:disabled{opacity:.45}
+.satir{display:flex;gap:10px;flex-wrap:wrap;margin:10px 0}
+.satir>button{flex:1 1 8rem}
+label{display:block;margin:.6em 0 .2em}
+select{font:inherit;width:100%;padding:.6em;border-radius:8px;border:1px solid var(--cizgi);background:var(--kart);color:var(--fg)}
+.onay{display:flex;gap:.6em;align-items:flex-start;margin:1em 0}
+.onay input{width:1.5em;height:1.5em;margin-top:.15em}
+#kelime{font-size:2.6rem;font-weight:700;text-align:center;line-height:1.15;margin:.3em 0;word-break:break-word}
+#kelime.uzun{font-size:1.7rem}
+#talimat{text-align:center;font-size:1.25rem;font-weight:600}
+#soylenecek{text-align:center;font-size:1.1rem;opacity:.85;min-height:1.5em}
+progress{width:100%;height:14px}
+.kucuk{font-size:.9rem;opacity:.8}
+#seviye{height:8px;background:var(--cizgi);border-radius:4px;overflow:hidden;margin:10px 0}
+#seviye>div{height:100%;width:0;background:var(--iyi)}
+.uyari{color:var(--kotu);font-weight:600}
+</style>
+</head>
+<body>
+<main>
+<h1>Ses kaydı toplama</h1>
+
+<section id="hata" class="kart uyari gizli"></section>
+
+<section id="onay" class="kart gizli">
+  <p><b>Katılım onayı</b></p>
+  <p>Bu kayıtlar yalnızca bu tez çalışması için kullanılacaktır. Kayıtlar telefonunuzun tarayıcısında alınır ve <b>bu sayfa hiçbir yere yüklemez</b>.
+  Sonda "İndir" ile oluşan zip dosyasını size verilen yoldan araştırmacıya iletirsiniz. Ses kayıtları, model eğitimi için Google Colab'a yüklenecektir.
+  Kayıtlarınızın silinmesini istediğiniz an araştırmacıya bildirebilirsiniz; bu durumda kayıtlarınız silinir. Sizden ad ya da kimlik bilgisi istenmez;
+  yalnızca size verilen kod (aşağıda) kullanılır.</p>
+  <p class="kucuk">Konuşmacı kodunuz: <b id="kodGoster"></b></p>
+  <label for="yas">Yaş aralığı (isteğe bağlı)</label>
+  <select id="yas">
+    <option value="">Belirtmek istemiyorum</option><option>18-25</option><option>26-35</option><option>36-50</option><option>51+</option>
+  </select>
+  <label for="cinsiyet">Cinsiyet (isteğe bağlı)</label>
+  <select id="cinsiyet">
+    <option value="">Belirtmek istemiyorum</option><option>kadın</option><option>erkek</option>
+  </select>
+  <div class="onay"><input type="checkbox" id="kabul"><label for="kabul" style="margin:0">Yukarıdakileri okudum, kabul ediyorum.</label></div>
+  <button class="ana" id="basla" disabled>Başla</button>
+</section>
+
+<section id="kayitEkrani" class="gizli">
+  <div class="kart">
+    <progress id="ilerleme" value="0" max="1"></progress>
+    <div class="kucuk" id="ilerlemeMetin"></div>
+    <div id="kelime"></div>
+    <div id="talimat"></div>
+    <div id="soylenecek"></div>
+    <div id="seviye"><div></div></div>
+    <div class="satir">
+      <button id="kaydet" class="kayit">● Kaydet</button>
+      <button id="dinle" disabled>▶ Dinle</button>
+      <button id="yeniden" disabled>↺ Yeniden al</button>
+    </div>
+    <div class="satir">
+      <button id="onceki">← Önceki</button>
+      <button id="sonraki" class="ana" disabled>Sonraki →</button>
+    </div>
+    <div id="durum" class="kucuk" aria-live="polite"></div>
+    <audio id="oynatici" class="gizli"></audio>
+  </div>
+  <div class="kart">
+    <button id="indir" class="ana" style="width:100%">İndir (zip)</button>
+    <div class="kucuk" id="indirNot"></div>
+    <div class="satir"><button id="sil" class="kucuk">Tüm kayıtlarımı bu telefondan sil</button></div>
+  </div>
+</section>
+</main>
+
+<script id="veri" type="application/json">{"surum":1,"kelimeler":[{"kelime":"ra","seviye":"hece","slug":"ra","soylenen":{"dogru":"ra","r-y":"ya","r-l":"la","r-yok":"a"},"beklenen":{"dogru":"r a","r-y":"j a","r-l":"l a","r-yok":"a"}},{"kelime":"re","seviye":"hece","slug":"re","soylenen":{"dogru":"re","r-y":"ye","r-l":"le","r-yok":"e"},"beklenen":{"dogru":"r e","r-y":"j e","r-l":"l e","r-yok":"e"}},{"kelime":"ri","seviye":"hece","slug":"ri","soylenen":{"dogru":"ri","r-y":"yi","r-l":"li","r-yok":"i"},"beklenen":{"dogru":"r i","r-y":"j i","r-l":"l i","r-yok":"i"}},{"kelime":"ro","seviye":"hece","slug":"ro","soylenen":{"dogru":"ro","r-y":"yo","r-l":"lo","r-yok":"o"},"beklenen":{"dogru":"r o","r-y":"j o","r-l":"l o","r-yok":"o"}},{"kelime":"ru","seviye":"hece","slug":"ru","soylenen":{"dogru":"ru","r-y":"yu","r-l":"lu","r-yok":"u"},"beklenen":{"dogru":"r u","r-y":"j u","r-l":"l u","r-yok":"u"}},{"kelime":"resim","seviye":"kelime_basi","slug":"resim","soylenen":{"dogru":"resim","r-y":"yesim","r-l":"lesim","r-yok":"esim"},"beklenen":{"dogru":"r e s i m","r-y":"j e s i m","r-l":"l e s i m","r-yok":"e s i m"}},{"kelime":"renk","seviye":"kelime_basi","slug":"renk","soylenen":{"dogru":"renk","r-y":"yenk","r-l":"lenk","r-yok":"enk"},"beklenen":{"dogru":"r e n k","r-y":"j e n k","r-l":"l e n k","r-yok":"e n k"}},{"kelime":"roket","seviye":"kelime_basi","slug":"roket","soylenen":{"dogru":"roket","r-y":"yoket","r-l":"loket","r-yok":"oket"},"beklenen":{"dogru":"r o k e t","r-y":"j o k e t","r-l":"l o k e t","r-yok":"o k e t"}},{"kelime":"robot","seviye":"kelime_basi","slug":"robot","soylenen":{"dogru":"robot","r-y":"yobot","r-l":"lobot","r-yok":"obot"},"beklenen":{"dogru":"r o b o t","r-y":"j o b o t","r-l":"l o b o t","r-yok":"o b o t"}},{"kelime":"radyo","seviye":"kelime_basi","slug":"radyo","soylenen":{"dogru":"radyo","r-y":"yadyo","r-l":"ladyo","r-yok":"adyo"},"beklenen":{"dogru":"r a d j o","r-y":"j a d j o","r-l":"l a d j o","r-yok":"a d j o"}},{"kelime":"rakam","seviye":"kelime_basi","slug":"rakam","soylenen":{"dogru":"rakam","r-y":"yakam","r-l":"lakam","r-yok":"akam"},"beklenen":{"dogru":"r a k a m","r-y":"j a k a m","r-l":"l a k a m","r-yok":"a k a m"}},{"kelime":"ruj","seviye":"kelime_basi","slug":"ruj","soylenen":{"dogru":"ruj","r-y":"yuj","r-l":"luj","r-yok":"uj"},"beklenen":{"dogru":"r u ʒ","r-y":"j u ʒ","r-l":"l u ʒ","r-yok":"u ʒ"}},{"kelime":"araba","seviye":"kelime_orta","slug":"araba","soylenen":{"dogru":"araba","r-y":"ayaba","r-l":"alaba","r-yok":"aaba"},"beklenen":{"dogru":"a r a b a","r-y":"a j a b a","r-l":"a l a b a","r-yok":"a a b a"}},{"kelime":"harita","seviye":"kelime_orta","slug":"harita","soylenen":{"dogru":"harita","r-y":"hayita","r-l":"halita","r-yok":"haita"},"beklenen":{"dogru":"h a r i t a","r-y":"h a j i t a","r-l":"h a l i t a","r-yok":"h a i t a"}},{"kelime":"para","seviye":"kelime_orta","slug":"para","soylenen":{"dogru":"para","r-y":"paya","r-l":"pala","r-yok":"paa"},"beklenen":{"dogru":"p a r a","r-y":"p a j a","r-l":"p a l a","r-yok":"p a a"}},{"kelime":"bere","seviye":"kelime_orta","slug":"bere","soylenen":{"dogru":"bere","r-y":"beye","r-l":"bele","r-yok":"bee"},"beklenen":{"dogru":"b e r e","r-y":"b e j e","r-l":"b e l e","r-yok":"b e e"}},{"kelime":"dere","seviye":"kelime_orta","slug":"dere","soylenen":{"dogru":"dere","r-y":"deye","r-l":"dele","r-yok":"dee"},"beklenen":{"dogru":"d e r e","r-y":"d e j e","r-l":"d e l e","r-yok":"d e e"}},{"kelime":"çorap","seviye":"kelime_orta","slug":"corap","soylenen":{"dogru":"çorap","r-y":"çoyap","r-l":"çolap","r-yok":"çoap"},"beklenen":{"dogru":"tʃ o r a p","r-y":"tʃ o j a p","r-l":"tʃ o l a p","r-yok":"tʃ o a p"}},{"kelime":"sarı","seviye":"kelime_orta","slug":"sari","soylenen":{"dogru":"sarı","r-y":"sayı","r-l":"salı","r-yok":"saı"},"beklenen":{"dogru":"s a r ɯ","r-y":"s a j ɯ","r-l":"s a l ɯ","r-yok":"s a ɯ"}},{"kelime":"kar","seviye":"kelime_son","slug":"kar","soylenen":{"dogru":"kar","r-y":"kay","r-l":"kal","r-yok":"ka"},"beklenen":{"dogru":"k a r","r-y":"k a j","r-l":"k a l","r-yok":"k a"}},{"kelime":"mor","seviye":"kelime_son","slug":"mor","soylenen":{"dogru":"mor","r-y":"moy","r-l":"mol","r-yok":"mo"},"beklenen":{"dogru":"m o r","r-y":"m o j","r-l":"m o l","r-yok":"m o"}},{"kelime":"yer","seviye":"kelime_son","slug":"yer","soylenen":{"dogru":"yer","r-y":"yey","r-l":"yel","r-yok":"ye"},"beklenen":{"dogru":"j e r","r-y":"j e j","r-l":"j e l","r-yok":"j e"}},{"kelime":"bir","seviye":"kelime_son","slug":"bir","soylenen":{"dogru":"bir","r-y":"biy","r-l":"bil","r-yok":"bi"},"beklenen":{"dogru":"b i r","r-y":"b i j","r-l":"b i l","r-yok":"b i"}},{"kelime":"nar","seviye":"kelime_son","slug":"nar","soylenen":{"dogru":"nar","r-y":"nay","r-l":"nal","r-yok":"na"},"beklenen":{"dogru":"n a r","r-y":"n a j","r-l":"n a l","r-yok":"n a"}},{"kelime":"kır","seviye":"kelime_son","slug":"kir","soylenen":{"dogru":"kır","r-y":"kıy","r-l":"kıl","r-yok":"kı"},"beklenen":{"dogru":"k ɯ r","r-y":"k ɯ j","r-l":"k ɯ l","r-yok":"k ɯ"}},{"kelime":"kırmızı araba geldi","seviye":"cumle","slug":"kirmizi-araba-geldi","soylenen":{"dogru":"kırmızı araba geldi","r-y":"kıymızı ayaba geldi","r-l":"kılmızı alaba geldi","r-yok":"kımızı aaba geldi"},"beklenen":{"dogru":"k ɯ r m ɯ z ɯ a r a b a g e l d i","r-y":"k ɯ j m ɯ z ɯ a j a b a g e l d i","r-l":"k ɯ l m ɯ z ɯ a l a b a g e l d i","r-yok":"k ɯ m ɯ z ɯ a a b a g e l d i"}},{"kelime":"arkadaşım resim çizdi","seviye":"cumle","slug":"arkadasim-resim-cizdi","soylenen":{"dogru":"arkadaşım resim çizdi","r-y":"aykadaşım yesim çizdi","r-l":"alkadaşım lesim çizdi","r-yok":"akadaşım esim çizdi"},"beklenen":{"dogru":"a r k a d a ʃ ɯ m r e s i m tʃ i z d i","r-y":"a j k a d a ʃ ɯ m j e s i m tʃ i z d i","r-l":"a l k a d a ʃ ɯ m l e s i m tʃ i z d i","r-yok":"a k a d a ʃ ɯ m e s i m tʃ i z d i"}},{"kelime":"robot yere düştü","seviye":"cumle","slug":"robot-yere-dustu","soylenen":{"dogru":"robot yere düştü","r-y":"yobot yeye düştü","r-l":"lobot yele düştü","r-yok":"obot yee düştü"},"beklenen":{"dogru":"r o b o t j e r e d y ʃ t y","r-y":"j o b o t j e j e d y ʃ t y","r-l":"l o b o t j e l e d y ʃ t y","r-yok":"o b o t j e e d y ʃ t y"}},{"kelime":"yeşil çorap kuru","seviye":"cumle","slug":"yesil-corap-kuru","soylenen":{"dogru":"yeşil çorap kuru","r-y":"yeşil çoyap kuyu","r-l":"yeşil çolap kulu","r-yok":"yeşil çoap kuu"},"beklenen":{"dogru":"j e ʃ i l tʃ o r a p k u r u","r-y":"j e ʃ i l tʃ o j a p k u j u","r-l":"j e ʃ i l tʃ o l a p k u l u","r-yok":"j e ʃ i l tʃ o a p k u u"}},{"kelime":"baba radyo dinler","seviye":"cumle","slug":"baba-radyo-dinler","soylenen":{"dogru":"baba radyo dinler","r-y":"baba yadyo dinley","r-l":"baba ladyo dinlel","r-yok":"baba adyo dinle"},"beklenen":{"dogru":"b a b a r a d j o d i n l e r","r-y":"b a b a j a d j o d i n l e j","r-l":"b a b a l a d j o d i n l e l","r-yok":"b a b a a d j o d i n l e"}}],"talimatlar":[{"kod":"dogru","ad":"Doğru söyle","adet":2},{"kod":"r-y","ad":"r yerine y söyle","adet":1},{"kod":"r-l","ad":"r yerine l söyle","adet":1},{"kod":"r-yok","ad":"r'yi söyleme","adet":1}]}</script>
+<script>
+"use strict";
+// ==SAF-BASLA== (DOM'suz saf işlevler: node ile test edilir)
+function kodGecerli(k) { return /^[a-z][0-9]{2,}$/.test(k || ""); }
+
+function kodUrldenAl(arama) {
+  var m = /[?&]kod=([^&#]*)/.exec(arama || "");
+  if (!m) return null;
+  var k;
+  try { k = decodeURIComponent(m[1]).toLowerCase(); } catch (e) { return null; }
+  return kodGecerli(k) ? k : null;
+}
+
+function dosyaAdi(kod, slug, talimat, n) { return kod + "_" + slug + "_" + talimat + "_" + n + ".wav"; }
+
+// veri: {kelimeler:[{kelime,seviye,slug,beklenen:{talimat:"j e s i m"},soylenen:{talimat:"yesim"}}], talimatlar:[{kod,ad,adet}]}
+function maddeler(veri, kod) {
+  var cikti = [];
+  veri.kelimeler.forEach(function (k) {
+    veri.talimatlar.forEach(function (t) {
+      for (var n = 1; n <= t.adet; n++) {
+        cikti.push({kelime: k.kelime, seviye: k.seviye, talimat: t.kod, talimatAd: t.ad, n: n, soylenen: k.soylenen[t.kod],
+                    beklenen: k.beklenen[t.kod], dosya: dosyaAdi(kod, k.slug, t.kod, n)});
+      }
+    });
+  });
+  return cikti;
+}
+
+// Alan ortalamalı (kutu süzgeçli) yeniden örnekleme; kaynakHz > hedefHz iken alçak geçirgen etkisi de verir
+function yenidenOrnekle(x, kaynakHz, hedefHz) {
+  if (kaynakHz === hedefHz) return x;
+  var oran = kaynakHz / hedefHz, n = Math.floor(x.length / oran), y = new Float32Array(n);
+  for (var i = 0; i < n; i++) {
+    var bas = i * oran, son = (i + 1) * oran, toplam = 0, agirlik = 0;
+    for (var j = Math.floor(bas); j < Math.min(Math.ceil(son), x.length); j++) {
+      var w = Math.min(j + 1, son) - Math.max(j, bas);
+      if (w > 0) { toplam += x[j] * w; agirlik += w; }
+    }
+    y[i] = agirlik ? toplam / agirlik : 0;
+  }
+  return y;
+}
+
+function birlestir(parcalar) {
+  var n = 0, i;
+  for (i = 0; i < parcalar.length; i++) n += parcalar[i].length;
+  var y = new Float32Array(n), konum = 0;
+  for (i = 0; i < parcalar.length; i++) { y.set(parcalar[i], konum); konum += parcalar[i].length; }
+  return y;
+}
+
+function metinYaz(v, konum, s) { for (var i = 0; i < s.length; i++) v.setUint8(konum + i, s.charCodeAt(i)); }
+
+// Float32 [-1,1] -> 16-bit PCM mono WAV (Uint8Array)
+function wavKodla(x, hz) {
+  var n = x.length, tampon = new ArrayBuffer(44 + 2 * n), v = new DataView(tampon);
+  metinYaz(v, 0, "RIFF"); v.setUint32(4, 36 + 2 * n, true); metinYaz(v, 8, "WAVE"); metinYaz(v, 12, "fmt ");
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, hz, true);
+  v.setUint32(28, hz * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true); metinYaz(v, 36, "data"); v.setUint32(40, 2 * n, true);
+  for (var i = 0; i < n; i++) {
+    var s = Math.max(-1, Math.min(1, x[i]));
+    v.setInt16(44 + 2 * i, s < 0 ? Math.round(s * 32768) : Math.round(s * 32767), true);
+  }
+  return new Uint8Array(tampon);
+}
+
+function tepeDb(x) {
+  var t = 0;
+  for (var i = 0; i < x.length; i++) { var a = Math.abs(x[i]); if (a > t) t = a; }
+  return 20 * Math.log10(Math.max(t, 1e-6));
+}
+
+var CRC_TABLOSU = (function () {
+  var t = new Uint32Array(256);
+  for (var n = 0; n < 256; n++) { var c = n; for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1); t[n] = c >>> 0; }
+  return t;
+})();
+
+function crc32(b) {
+  var c = 0xFFFFFFFF;
+  for (var i = 0; i < b.length; i++) c = CRC_TABLOSU[(c ^ b[i]) & 0xFF] ^ (c >>> 8);
+  return (c ^ 0xFFFFFFFF) >>> 0;
+}
+
+function utf8(s) {
+  if (typeof TextEncoder !== "undefined") return new TextEncoder().encode(s);
+  var kodlu = unescape(encodeURIComponent(s)), b = new Uint8Array(kodlu.length);
+  for (var i = 0; i < kodlu.length; i++) b[i] = kodlu.charCodeAt(i);
+  return b;
+}
+
+// Sıkıştırmasız (store) zip; dosyalar: [{ad: "a.wav", veri: Uint8Array}]
+function zipOlustur(dosyalar, an) {
+  var d = an || new Date();
+  var dosZaman = (d.getHours() << 11) | (d.getMinutes() << 5) | (d.getSeconds() >> 1);
+  var dosTarih = (((d.getFullYear() - 1980) & 0x7F) << 9) | ((d.getMonth() + 1) << 5) | d.getDate();
+  var yerel = [], merkez = [], konum = 0, toplam = 0, i;
+  for (i = 0; i < dosyalar.length; i++) {
+    var ad = utf8(dosyalar[i].ad), veri = dosyalar[i].veri, crc = crc32(veri);
+    var y = new DataView(new ArrayBuffer(30)), m = new DataView(new ArrayBuffer(46));
+    y.setUint32(0, 0x04034b50, true); y.setUint16(4, 20, true); y.setUint16(6, 0x0800, true); y.setUint16(8, 0, true);
+    y.setUint16(10, dosZaman, true); y.setUint16(12, dosTarih, true); y.setUint32(14, crc, true); y.setUint32(18, veri.length, true);
+    y.setUint32(22, veri.length, true); y.setUint16(26, ad.length, true); y.setUint16(28, 0, true);
+    m.setUint32(0, 0x02014b50, true); m.setUint16(4, 20, true); m.setUint16(6, 20, true); m.setUint16(8, 0x0800, true); m.setUint16(10, 0, true);
+    m.setUint16(12, dosZaman, true); m.setUint16(14, dosTarih, true); m.setUint32(16, crc, true); m.setUint32(20, veri.length, true);
+    m.setUint32(24, veri.length, true); m.setUint16(28, ad.length, true); m.setUint16(30, 0, true); m.setUint16(32, 0, true);
+    m.setUint16(34, 0, true); m.setUint16(36, 0, true); m.setUint32(38, 0, true); m.setUint32(42, konum, true);
+    yerel.push(new Uint8Array(y.buffer), ad, veri);
+    merkez.push(new Uint8Array(m.buffer), ad);
+    konum += 30 + ad.length + veri.length;
+  }
+  var merkezBoyut = 0;
+  merkez.forEach(function (p) { merkezBoyut += p.length; });
+  var son = new DataView(new ArrayBuffer(22));
+  son.setUint32(0, 0x06054b50, true); son.setUint16(4, 0, true); son.setUint16(6, 0, true); son.setUint16(8, dosyalar.length, true);
+  son.setUint16(10, dosyalar.length, true); son.setUint32(12, merkezBoyut, true); son.setUint32(16, konum, true); son.setUint16(20, 0, true);
+  var hepsi = yerel.concat(merkez, [new Uint8Array(son.buffer)]);
+  hepsi.forEach(function (p) { toplam += p.length; });
+  var cikti = new Uint8Array(toplam), yer = 0;
+  hepsi.forEach(function (p) { cikti.set(p, yer); yer += p.length; });
+  return cikti;
+}
+
+function csvAlan(s) { s = String(s); return /[",\n\r]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+
+var CSV_ALANLARI = ["kod", "kelime", "seviye", "talimat", "beklenen_fonemler", "dosya", "sure"];
+
+function csvOlustur(basliklar, satirlar) {
+  var cikti = [basliklar.join(",")];
+  satirlar.forEach(function (s) { cikti.push(basliklar.map(function (b) { return csvAlan(s[b]); }).join(",")); });
+  return cikti.join("\n") + "\n";
+}
+
+function etiketlerCsv(kod, tamamlananlar) {
+  return csvOlustur(CSV_ALANLARI, tamamlananlar.map(function (r) {
+    return {kod: kod, kelime: r.madde.kelime, seviye: r.madde.seviye, talimat: r.madde.talimat, beklenen_fonemler: r.madde.beklenen,
+            dosya: r.madde.dosya, sure: r.sure.toFixed(2)};
+  }));
+}
+
+function konusmaciCsv(kod, yas, cinsiyet) {
+  return csvOlustur(["kod", "yas_araligi", "cinsiyet"], [{kod: kod, yas_araligi: yas || "", cinsiyet: cinsiyet || ""}]);
+}
+// ==SAF-BITIR==
+
+(function () {
+  var VERI = JSON.parse(document.getElementById("veri").textContent);
+  var HEDEF_HZ = 16000, SESSIZ_DB = -45;
+  var kod = kodUrldenAl(location.search);
+  var el = function (id) { return document.getElementById(id); };
+  var durum = {liste: [], kayitlar: {}, idx: 0, yas: "", cinsiyet: "", kabul: false};
+  var depoAnahtar = "toplama:" + kod;
+
+  // ---------- kalıcı depo: IndexedDB (kayıtlar) + localStorage (ilerleme); ikisi de yoksa bellekte çalışır
+  var db = null;
+  function dbAc() {
+    return new Promise(function (coz) {
+      try {
+        var istek = indexedDB.open("sesletim_toplama", 1);
+        istek.onupgradeneeded = function () { istek.result.createObjectStore("kayit"); };
+        istek.onsuccess = function () { db = istek.result; coz(true); };
+        istek.onerror = function () { coz(false); };
+      } catch (e) { coz(false); }
+    });
+  }
+  function dbIslem(kip, f) {
+    return new Promise(function (coz) {
+      if (!db) { coz(null); return; }
+      try {
+        var tx = db.transaction("kayit", kip), s = tx.objectStore("kayit"), r = f(s);
+        tx.oncomplete = function () { coz(r && r.result !== undefined ? r.result : true); };
+        tx.onerror = tx.onabort = function () { coz(null); };
+      } catch (e) { coz(null); }
+    });
+  }
+  function kayitKaydet(ad, nesne) { return dbIslem("readwrite", function (s) { return s.put(nesne, kod + "/" + ad); }); }
+  function kayitlariOku() {
+    return new Promise(function (coz) {
+      var cikti = {};
+      if (!db) { coz(cikti); return; }
+      try {
+        var istek = db.transaction("kayit", "readonly").objectStore("kayit").openCursor();
+        istek.onsuccess = function () {
+          var c = istek.result;
+          if (c) { if (String(c.key).indexOf(kod + "/") === 0) cikti[String(c.key).slice(kod.length + 1)] = c.value; c.continue(); } else coz(cikti);
+        };
+        istek.onerror = function () { coz(cikti); };
+      } catch (e) { coz(cikti); }
+    });
+  }
+  function hepsiniSil() {
+    return dbIslem("readwrite", function (s) { return s.clear(); }).then(function () {
+      try { localStorage.removeItem(depoAnahtar); } catch (e) { /* yok say */ }
+    });
+  }
+  function ilerlemeKaydet() {
+    try { localStorage.setItem(depoAnahtar, JSON.stringify({kabul: durum.kabul, yas: durum.yas, cinsiyet: durum.cinsiyet, idx: durum.idx})); } catch (e) { /* yok say */ }
+  }
+  function ilerlemeOku() {
+    try { return JSON.parse(localStorage.getItem(depoAnahtar) || "null"); } catch (e) { return null; }
+  }
+
+  // ---------- mikrofon
+  var mik = {akim: null, ctx: null, isleyici: null, parcalar: [], kaydediyor: false, hz: 0};
+  function mikAc() {
+    if (mik.akim) { if (mik.ctx.state === "suspended") mik.ctx.resume(); return Promise.resolve(); }
+    // AudioContext TIKLAMA İÇİNDE, eşzamanlı oluşturulup sürdürülür (iOS Safari / Chrome otomatik oynatma kuralı: izin isteminden sonra
+    // oluşturulursa askıda kalabilir ve hiç ses gelmez)
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!mik.ctx) mik.ctx = new AC();
+    if (mik.ctx.state === "suspended") mik.ctx.resume();
+    return navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false}})
+      .then(function (akim) {
+        mik.akim = akim; mik.hz = mik.ctx.sampleRate;
+        if (mik.ctx.state === "suspended") mik.ctx.resume();
+        var kaynak = mik.ctx.createMediaStreamSource(akim), sessiz = mik.ctx.createGain();
+        sessiz.gain.value = 0;
+        mik.isleyici = mik.ctx.createScriptProcessor(4096, 1, 1);
+        mik.isleyici.onaudioprocess = function (e) {
+          if (!mik.kaydediyor) return;
+          var g = e.inputBuffer.getChannelData(0), kopya = new Float32Array(g);
+          mik.parcalar.push(kopya);
+          var t = 0; for (var i = 0; i < kopya.length; i++) { var a = Math.abs(kopya[i]); if (a > t) t = a; }
+          el("seviye").firstChild.style.width = Math.min(100, Math.round(t * 140)) + "%";
+        };
+        kaynak.connect(mik.isleyici); mik.isleyici.connect(sessiz); sessiz.connect(mik.ctx.destination);
+      });
+  }
+
+  // ---------- arayüz
+  var simdiki = function () { return durum.liste[durum.idx]; };
+  var kayitli = function (m) { return !!durum.kayitlar[m.dosya]; };
+  function goster(ekran) {
+    ["hata", "onay", "kayitEkrani"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
+  }
+  function hata(metin) { el("hata").textContent = metin; goster("hata"); }
+  function ciz() {
+    var m = simdiki(), tamam = durum.liste.filter(kayitli).length;
+    el("ilerleme").max = durum.liste.length; el("ilerleme").value = tamam;
+    el("ilerlemeMetin").textContent = "Kayıt " + (durum.idx + 1) + " / " + durum.liste.length + " (tamamlanan: " + tamam + ")";
+    el("kelime").textContent = m.kelime; el("kelime").classList.toggle("uzun", m.kelime.length > 12);
+    el("talimat").textContent = m.talimatAd + (m.talimat === "dogru" && m.n > 1 ? " (tekrar)" : "");
+    el("soylenecek").textContent = m.talimat === "dogru" ? "" : (m.talimat === "r-yok" ? "→ " + m.soylenen + " (r söylenmez)" : "→ " + m.soylenen);
+    var var_ = kayitli(m);
+    var kaydediyor = mik.kaydediyor;   // kayıt sürerken gezinme ve dinleme kapalı
+    el("dinle").disabled = !var_ || kaydediyor; el("yeniden").disabled = !var_ || kaydediyor;
+    el("sonraki").disabled = !var_ || kaydediyor || durum.idx >= durum.liste.length - 1;
+    el("onceki").disabled = durum.idx === 0 || kaydediyor; el("kaydet").disabled = false;
+    el("kaydet").textContent = mik.kaydediyor ? "■ Durdur" : (var_ ? "● Yeniden kaydet" : "● Kaydet");
+    el("indirNot").textContent = tamam === durum.liste.length ? "Tüm kayıtlar tamam. İndirip zip dosyasını araştırmacıya iletin."
+      : "Şu an " + tamam + " / " + durum.liste.length + " kayıt var; eksikle de indirebilirsiniz (kaldığınız yerden devam edebilirsiniz).";
+    el("seviye").firstChild.style.width = "0";
+    ilerlemeKaydet();
+  }
+  function say(metin) { el("durum").textContent = metin || ""; }
+
+  function kaydetTikla() {
+    if (mik.kaydediyor) { durdur(); return; }
+    say("Mikrofon açılıyor…");
+    mikAc().then(function () { mik.parcalar = []; mik.kaydediyor = true; say("Kaydediliyor… söyleyin, sonra Durdur'a basın."); ciz(); })
+      .catch(function (e) {
+        say("Mikrofon açılamadı: izin verdiğinizden emin olun (Ayarlar → tarayıcı → Mikrofon). Sayfa güvenli (https) bağlantıyla açılmış olmalı.");
+        void e;
+      });
+  }
+  function durdur() {
+    mik.kaydediyor = false;
+    var ham = birlestir(mik.parcalar), x = yenidenOrnekle(ham, mik.hz, HEDEF_HZ), m = simdiki();
+    if (x.length < HEDEF_HZ * 0.3) { say("Kayıt çok kısa; yeniden alın."); ciz(); return; }
+    var sessizMi = tepeDb(x) < SESSIZ_DB;
+    var wav = wavKodla(x, HEDEF_HZ), sure = x.length / HEDEF_HZ;
+    durum.kayitlar[m.dosya] = {wav: wav, sure: sure};
+    kayitKaydet(m.dosya, {wav: wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength), sure: sure});
+    say(sessizMi ? "Ses çok kısık ya da hiç gelmedi: mikrofona yaklaşıp yeniden alın." : "Kaydedildi (" + sure.toFixed(1) + " sn). Dinleyebilir ya da yeniden alabilirsiniz.");
+    ciz();
+  }
+  function dinle() {
+    var k = durum.kayitlar[simdiki().dosya];
+    if (!k) return;
+    var oynatici = el("oynatici");
+    if (oynatici.src) URL.revokeObjectURL(oynatici.src);
+    oynatici.src = URL.createObjectURL(new Blob([k.wav], {type: "audio/wav"}));
+    oynatici.play();
+  }
+  function yeniden() {
+    delete durum.kayitlar[simdiki().dosya];
+    dbIslem("readwrite", function (s) { return s.delete(kod + "/" + simdiki().dosya); });
+    say("Silindi; yeniden kaydedin."); ciz();
+  }
+  function git(d) { durum.idx = Math.max(0, Math.min(durum.liste.length - 1, durum.idx + d)); say(""); ciz(); }
+
+  function indir() {
+    var tamamlananlar = durum.liste.filter(kayitli).map(function (m) { return {madde: m, sure: durum.kayitlar[m.dosya].sure}; });
+    if (!tamamlananlar.length) { say("Henüz kayıt yok."); return; }
+    var dosyalar = tamamlananlar.map(function (r) { return {ad: r.madde.dosya, veri: new Uint8Array(durum.kayitlar[r.madde.dosya].wav)}; });
+    dosyalar.push({ad: "etiketler.csv", veri: utf8(etiketlerCsv(kod, tamamlananlar))});
+    dosyalar.push({ad: "konusmaci.csv", veri: utf8(konusmaciCsv(kod, durum.yas, durum.cinsiyet))});
+    var blob = new Blob([zipOlustur(dosyalar)], {type: "application/zip"}), a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = kod + "_toplama.zip"; document.body.appendChild(a); a.click();
+    setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    say("Zip hazırlandı (" + dosyalar.length + " dosya). İndirilenler klasörünüzde.");
+  }
+  var silOnay = false;
+  function sil() {
+    if (!silOnay) { silOnay = true; el("sil").textContent = "Emin misiniz? Bir daha basın"; setTimeout(function () { silOnay = false; el("sil").textContent = "Tüm kayıtlarımı bu telefondan sil"; }, 5000); return; }
+    hepsiniSil().then(function () { durum.kayitlar = {}; durum.idx = 0; silOnay = false; el("sil").textContent = "Tüm kayıtlarımı bu telefondan sil"; say("Bu telefondaki tüm kayıtlar silindi."); ciz(); });
+  }
+
+  function kayitEkraninaGec() {
+    goster("kayitEkrani");
+    var ilk = durum.liste.findIndex(function (m) { return !kayitli(m); });
+    durum.idx = ilk === -1 ? durum.liste.length - 1 : ilk;   // yarıda kaldıysa kaldığı yerden
+    ciz();
+  }
+
+  function baslat() {
+    if (!kod) { hata("Bu bağlantıda konuşmacı kodu yok. Size verilen bağlantıyı (…/?kod=y03 biçiminde) açın."); return; }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { hata("Bu tarayıcı mikrofon kaydını desteklemiyor ya da sayfa güvenli (https) bağlantıyla açılmadı. Android Chrome ya da iPhone Safari ile, https bağlantısıyla açın."); return; }
+    durum.liste = maddeler(VERI, kod);
+    el("kodGoster").textContent = kod;
+    dbAc().then(kayitlariOku).then(function (k) {
+      Object.keys(k).forEach(function (ad) { durum.kayitlar[ad] = {wav: new Uint8Array(k[ad].wav), sure: k[ad].sure}; });
+      var onceki = ilerlemeOku();
+      if (onceki && onceki.kabul) { durum.kabul = true; durum.yas = onceki.yas || ""; durum.cinsiyet = onceki.cinsiyet || ""; kayitEkraninaGec(); } else goster("onay");
+    });
+    el("kabul").addEventListener("change", function () { el("basla").disabled = !el("kabul").checked; });
+    el("basla").addEventListener("click", function () {
+      durum.kabul = true; durum.yas = el("yas").value; durum.cinsiyet = el("cinsiyet").value; kayitEkraninaGec();
+    });
+    el("kaydet").addEventListener("click", kaydetTikla); el("dinle").addEventListener("click", dinle); el("yeniden").addEventListener("click", yeniden);
+    el("onceki").addEventListener("click", function () { git(-1); }); el("sonraki").addEventListener("click", function () { git(1); });
+    el("indir").addEventListener("click", indir); el("sil").addEventListener("click", sil);
+  }
+  baslat();
+})();
+</script>
+</body>
+</html>
