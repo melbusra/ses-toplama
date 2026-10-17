@@ -41,20 +41,17 @@ a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;backgroun
 <main>
 <h1>Ses kaydı toplama</h1>
 
-<section id="iabUyari" class="kart uyari gizli" role="alert"><b>Lütfen sağ üstteki menüden 'Chrome'da aç' / 'Safari'de aç' seçin, yoksa dosya inmez.</b>
-  Bu sayfa bir uygulamanın (WhatsApp, Instagram, Facebook...) içinde açılmış görünüyor; kayıtları orada gönderemeyebilirsiniz.</section>
+<section id="iabUyari" class="kart uyari gizli" role="alert">
+  <p style="font-size:1.35rem;margin:.2em 0"><b>Kayıtlarınızı gönderebilmek için lütfen Chrome'da açın</b></p>
+  <p class="kucuk">Bu sayfa bir uygulamanın (WhatsApp, Instagram, Facebook...) içinde açılmış görünüyor; kayıtları buradan gönderemeyebilirsiniz. Kayıtlar tarayıcıya özeldir:
+  önce kayıt yapıp sonra Chrome'a geçerseniz kaydettikleriniz görünmez; en iyisi şimdi geçmek.</p>
+  <a id="iabAc" class="buyuk" href="#" rel="noopener">Chrome'da aç</a>
+</section>
 
 <section id="chromeKart" class="kart gizli" role="alert">
   <p class="uyari" id="chromeNeden"></p>
   <a id="chromeAc" class="buyuk" href="#" rel="noopener">Chrome'da aç</a>
   <p class="kucuk" id="chromeNot">Aynı adres (kodunuz korunur) tarayıcıda açılır. Tarayıcıya özel olduğu için, bu tarayıcıda yaptığınız kayıtlar orada görünmez; orada baştan kaydedin.</p>
-</section>
-
-<section id="chromeEkrani" class="kart gizli">
-  <p><b>Kayıtları gönderebilmek için Chrome'da açın</b></p>
-  <p>Bu uygulama içi tarayıcıda dosya gönderme yok; kayıtlar buradan gönderilemez. Kayıtlar tarayıcıya özeldir: şimdi kayıt yapıp sonra Chrome'a geçerseniz
-  kaydettikleriniz <b>kaybolur</b>. Bu yüzden kayıttan ÖNCE geçin.</p>
-  <a id="chromeAc2" class="buyuk" href="#" rel="noopener">Chrome'da aç</a>
 </section>
 
 <section id="hata" class="kart uyari gizli"></section>
@@ -120,6 +117,10 @@ a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;backgroun
     <button id="gonder" class="ana" style="width:100%">Şimdiye kadarkileri gönder (WhatsApp / Paylaş)</button>
     <button id="indir" style="width:100%;margin-top:8px">İndir (zip)</button>
     <div class="kucuk" id="indirNot"></div>
+    <div id="iabIndirNot" class="gizli">
+      <p class="uyari">İndirme başlamazsa bu tarayıcı dosya indiremiyor demektir. Chrome'da açıp kayıtları yeniden yapın.</p>
+      <a id="iabIndirAc" class="buyuk" href="#" rel="noopener">Chrome'da aç</a>
+    </div>
     <div id="indirHata" class="uyari gizli" role="alert"></div>
     <div class="satir"><button id="sil" class="kucuk">Tüm kayıtlarımı bu telefondan sil</button></div>
   </div>
@@ -284,16 +285,21 @@ function wavSessizMi(bayt) {
   return sessizMi(x, 16000);
 }
 // Sayfa sürümü (üretici yerleştirir: v<no>-<şablon özeti>); sayfada küçük yazıyla görünür ve konusmaci.csv'ye 'surum' olarak yazılır
-var SAYFA_SURUMU = "v1-7c525da7";
+var SAYFA_SURUMU = "v3-58fc8b3e", SAYFA_V = "3";
 // ?kod korunur: adreste kod yoksa kullanılan kod eklenir (otomatik kod başka tarayıcıda aynı kalsın). Çocuk (?cocuk=1) ve ?kisa=1 aynen kalır; # kısmı atılır.
-function adresKodlu(href, kod) {
+// ekler: {kisa: true -> ?kisa=1 yoksa eklenir; v: "3" -> ?v= eklenir/güncellenir (taze sayfa)}. Çocuk sürümünde ?cocuk=1 adreste zaten vardır ve aynen kalır.
+function adresKodlu(href, kod, ekler) {
   var h = String(href || "").split("#")[0];
-  if (/[?&]kod=/.test(h) || !kod) return h;
-  return h + (h.indexOf("?") >= 0 ? "&" : "?") + "kod=" + encodeURIComponent(kod);
+  var ekle = function (ad, deger) { h += (h.indexOf("?") >= 0 ? "&" : "?") + ad + "=" + encodeURIComponent(deger); };
+  if (kod && !/[?&]kod=/.test(h)) ekle("kod", kod);
+  ekler = ekler || {};
+  if (ekler.kisa && !/[?&]kisa=/.test(h)) ekle("kisa", "1");
+  if (ekler.v) { if (/[?&]v=/.test(h)) h = h.replace(/([?&]v=)[^&]*/, "$1" + encodeURIComponent(ekler.v)); else ekle("v", ekler.v); }
+  return h;
 }
 // Uygulama içi tarayıcıdan gerçek tarayıcıya geçiş bağlantısı. Android: Chrome intent'i (yedek: aynı https adres); iPhone: "Safari'de aç" + aynı adres.
-function chromeAcBaglantisi(href, kod, ua) {
-  var h = adresKodlu(href, kod), m = /^(https?):\/\/(.*)$/.exec(h);
+function chromeAcBaglantisi(href, kod, ua, ekler) {
+  var h = adresKodlu(href, kod, ekler), m = /^(https?):\/\/(.*)$/.exec(h);
   if (/Android/i.test(ua || "") && m) {
     return {tur: "android", ad: "Chrome'da aç",
             href: "intent://" + m[2] + "#Intent;scheme=" + m[1] + ";package=com.android.chrome;S.browser_fallback_url=" + encodeURIComponent(h) + ";end"};
@@ -301,8 +307,6 @@ function chromeAcBaglantisi(href, kod, ua) {
   if (/iPhone|iPad|iPod/i.test(ua || "")) return {tur: "ios", ad: "Safari'de aç", href: h};
   return {tur: "diger", ad: "Chrome'da aç", href: h};
 }
-// Kayda başlamadan önce: uygulama içi tarayıcıdaysak ve dosya paylaşımı yoksa kayıtlar gönderilemez -> önce Chrome'a geçilmeli
-function gonderEngeli(ua, paylasilabilir) { return uygulamaIciTarayici(ua) && !paylasilabilir; }
 
 // Mikrofon akımı sağlam mı: iz canlı, susturulmamış ve ses bağlamı çalışıyor
 function akimSaglam(akim, ctxDurum) {
@@ -431,12 +435,13 @@ function kisaSecim(veri, kod) {
 }
 
 // Uygulama içi tarayıcı (WhatsApp, Instagram, Facebook, Messenger, Snapchat, Line, WeChat...): dosya indirme çoğunlukla çalışmaz.
-function uygulamaIciTarayici(ua) { return /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Snapchat|Line\/|MicroMessenger|Twitter|TikTok|musical_ly/i.test(ua || ""); }
+function uygulamaIciTarayici(ua) { return /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Snapchat|Line\/|MicroMessenger|Twitter|TikTok|musical_ly|\bwv\b/i.test(ua || ""); }
 // Dosya paylaşımı (navigator.share + canShare ile dosya) bu tarayıcıda var mı? dosya: deneme File nesnesi.
 function dosyaPaylasilabilir(nav, dosya) {
   try { return !!(nav && typeof nav.share === "function" && typeof nav.canShare === "function" && nav.canShare({files: [dosya]})); } catch (e) { return false; }
 }
 // Hatanın kendisini göster (sessiz kalma): "Ad: mesaj".
+function kullaniciMesaji(e) { return "Dosya gönderilemedi."; }      // ham hata metni (NotAllowedError...) kullanıcıya GÖSTERİLMEZ
 function hataMetni(e) {
   if (e === null || e === undefined) return "bilinmeyen hata";
   var ad = e.name || "Hata", ileti = e.message || String(e);
@@ -562,9 +567,14 @@ function hataMetni(e) {
     if (document.visibilityState === "visible" && !mik.kaydediyor) mikSifirla();
   });
 
+  // Bu sayfanın kodunu ve modunu (ve taze ?v=) taşıyan Chrome'da aç / Safari'de aç bağlantısı; tüm "Chrome'da aç" düğmelerine yazılır
+  function chromeBagla() {
+    var b = chromeAcBaglantisi(location.href, kod, navigator.userAgent, {kisa: kisaModu, v: SAYFA_V});
+    ["chromeAc", "iabAc", "iabIndirAc"].forEach(function (id) { el(id).href = b.href; el(id).textContent = b.ad; });
+    return b;
+  }
   function chromeGoster(neden) {
-    var b = chromeAcBaglantisi(location.href, kod, navigator.userAgent);
-    ["chromeAc", "chromeAc2"].forEach(function (id) { el(id).href = b.href; el(id).textContent = b.ad; });
+    var b = chromeBagla();
     el("chromeNeden").textContent = neden;
     if (b.tur === "ios") el("chromeNot").textContent = "Safari'de açılan sayfada kodunuz (" + kod + ") korunur; kayıtları orada baştan alın.";
     el("chromeKart").classList.remove("gizli");
@@ -577,7 +587,6 @@ function hataMetni(e) {
     el("testDevam").disabled = false;
   }
   function mikTestEkrani() {
-    if (durum.gonderEngeli) { goster("chromeEkrani"); chromeGoster("Bu tarayıcıda dosya gönderme yok."); return; }       // kayıttan ÖNCE
     goster("mikTest"); mik.test = false; mik.testSn = 0;
     el("testDevam").disabled = !durum.mikTestGecti;
     el("testMetin").textContent = durum.mikTestGecti ? "Mikrofon testi geçildi ✓" : 'Önce mikrofonu açın, sonra yüksek sesle "Merhaba" deyin.';
@@ -601,7 +610,7 @@ function hataMetni(e) {
   var simdiki = function () { return durum.liste[durum.idx]; };
   var kayitli = function (m) { return !!durum.kayitlar[m.dosya]; };
   function goster(ekran) {
-    ["hata", "onay", "mikTest", "kayitEkrani", "chromeEkrani"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
+    ["hata", "onay", "mikTest", "kayitEkrani"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
   }
   function hata(metin) { el("hata").textContent = metin; goster("hata"); }
   function ciz() {
@@ -653,6 +662,7 @@ function hataMetni(e) {
     var wav = wavKodla(x, HEDEF_HZ), sure = x.length / HEDEF_HZ;
     durum.kayitlar[m.dosya] = {wav: wav, sure: sure};
     kayitKaydet(m.dosya, {wav: wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength), sure: sure});
+    zipPlanla();
     say("Kaydedildi (" + sure.toFixed(1) + " sn). Dinleyebilir ya da yeniden alabilirsiniz.");
     ciz();
   }
@@ -667,10 +677,26 @@ function hataMetni(e) {
   function yeniden() {
     delete durum.kayitlar[simdiki().dosya];
     dbIslem("readwrite", function (s) { return s.delete(kod + "/" + simdiki().dosya); });
+    zipPlanla();
     say("Silindi; yeniden kaydedin."); ciz();
   }
   function git(d) { durum.idx = Math.max(0, Math.min(durum.liste.length - 1, durum.idx + d)); say(""); ciz(); }
 
+  // Zip kayıt değişince önceden (arka planda) hazırlanır; "Gönder"e basılınca navigator.share beklemeden çağrılır (kullanıcı etkinliği bitmesin).
+  var zipZaman = null;
+  function zipPlanla() {
+    durum.zip = null;                                                   // eskimiş zip kullanılmaz; hazır olana dek zipAl() eşzamanlı üretir
+    clearTimeout(zipZaman);
+    zipZaman = setTimeout(function () { try { zipAl(); } catch (e) { durum.sonHata = hataMetni(e); } }, 50);
+  }
+  function zipAl() {
+    if (!durum.zip) {
+      var z = zipHazirla();
+      if (z) { try { z.file = new File([z.blob], z.ad, {type: "application/zip"}); } catch (e) { z.file = null; } }
+      durum.zip = z;
+    }
+    return durum.zip;
+  }
   function zipHazirla() {
     var tamamlananlar = durum.liste.filter(function (m) { return kayitli(m) && !wavSessizMi(durum.kayitlar[m.dosya].wav); }).map(function (m) { return {madde: m, sure: durum.kayitlar[m.dosya].sure}; });
     if (!tamamlananlar.length) return null;
@@ -680,36 +706,50 @@ function hataMetni(e) {
                                                               : konusmaciCsv(kod, durum.yas, durum.cinsiyet, "yetiskin", "18+", kisaModu ? "kisa" : "tam", SAYFA_SURUMU))});
     return {blob: new Blob([zipOlustur(dosyalar)], {type: "application/zip"}), ad: kod + "_toplama.zip", sayi: dosyalar.length};
   }
-  function indirHatasi(e) { var h = el("indirHata"); h.textContent = e ? "Hata: " + hataMetni(e) : ""; h.classList.toggle("gizli", !e); }
+  var INDIRILDI_MESAJI = "Dosya telefonunuzun İndirilenler klasörüne kaydedildi. WhatsApp'ta ataç → Belge ile araştırmacıya gönderin.";
+  function indirHatasi(e) {          // ham hata metni gösterilmez: yalnızca kayda geçer; kullanıcıya sade mesaj
+    var h = el("indirHata");
+    if (e) durum.sonHata = hataMetni(e);
+    h.textContent = e ? kullaniciMesaji(e) : ""; h.classList.toggle("gizli", !e);
+  }
+  // Zip'i indirir. Başarısızsa (istisna) "Chrome'da aç" düğmesini gösterir. Dönüş: başladı mı.
   function indir() {
     indirHatasi(null);
+    var z;
     try {
-      var z = zipHazirla();
-      if (!z) { say("Henüz kayıt yok."); return; }
+      z = zipAl();
+      if (!z) { say("Henüz kayıt yok."); return false; }
       var a = document.createElement("a");
       a.href = URL.createObjectURL(z.blob); a.download = z.ad; document.body.appendChild(a); a.click();
       setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 30000);
-      say("Zip hazırlandı (" + z.sayi + " dosya). İndirilenler klasörünüzde değilse 'Gönder' düğmesini deneyin.");
-    } catch (e) { indirHatasi(e); say("İndirme başarısız."); }
+      say(INDIRILDI_MESAJI);
+      return true;
+    } catch (e) {
+      durum.sonHata = hataMetni(e);
+      say("Dosya indirilemedi."); chromeGoster("Dosya bu tarayıcıdan indirilemedi.");
+      return false;
+    }
   }
+  // Gönder: hazır zip hemen paylaşılır (await yok). Destek yoksa ya da AbortError dışında bir hata olursa zip otomatik indirilir; AbortError: hiçbir şey yapılmaz.
   function gonder() {
     indirHatasi(null);
     var z;
-    try { z = zipHazirla(); } catch (e) { indirHatasi(e); return; }
+    try { z = zipAl(); } catch (e) { durum.sonHata = hataMetni(e); say("Dosya hazırlanamadı."); chromeGoster("Dosya hazırlanamadı."); return; }
     if (!z) { say("Henüz kayıt yok."); return; }
-    var dosya = new File([z.blob], z.ad, {type: "application/zip"});
-    if (!dosyaPaylasilabilir(navigator, dosya)) { indir(); return; }          // paylaşım yoksa indirmeye düş
-    navigator.share({files: [dosya], title: "Ses kayıtları (" + kod + ")", text: "Ses kayıtları: " + kod}).then(function () {
-      say("Paylaşım penceresi kapandı.");
-    }).catch(function (e) {
-      if (e && e.name === "AbortError") { say("Gönderme iptal edildi."); return; }      // kullanıcı kapattı: hata değil
-      indirHatasi(e); say("Paylaşılamadı; 'İndir (zip)' düğmesini deneyin.");
+    if (!z.file || !dosyaPaylasilabilir(navigator, z.file)) { indir(); return; }
+    var s;
+    try { s = navigator.share({files: [z.file], title: "Ses kayıtları (" + kod + ")", text: "Ses kayıtları: " + kod}); }
+    catch (e) { durum.sonHata = hataMetni(e); indir(); return; }
+    s.then(function () { say("Paylaşım penceresi kapandı."); }).catch(function (e) {
+      if (e && e.name === "AbortError") { say(""); return; }                // kullanıcı vazgeçti: hiçbir şey yapma
+      durum.sonHata = hataMetni(e);                                          // NotAllowedError dahil her hata: otomatik indirme
+      indir();
     });
   }
   var silOnay = false;
   function sil() {
     if (!silOnay) { silOnay = true; el("sil").textContent = "Emin misiniz? Bir daha basın"; setTimeout(function () { silOnay = false; el("sil").textContent = "Tüm kayıtlarımı bu telefondan sil"; }, 5000); return; }
-    hepsiniSil().then(function () { durum.kayitlar = {}; durum.idx = 0; silOnay = false; el("sil").textContent = "Tüm kayıtlarımı bu telefondan sil"; say("Bu telefondaki tüm kayıtlar silindi."); ciz(); });
+    hepsiniSil().then(function () { durum.kayitlar = {}; zipPlanla(); durum.idx = 0; silOnay = false; el("sil").textContent = "Tüm kayıtlarımı bu telefondan sil"; say("Bu telefondaki tüm kayıtlar silindi."); ciz(); });
   }
 
   function kayitEkraninaGec() {
@@ -746,6 +786,7 @@ function hataMetni(e) {
       });
       sessizler.forEach(function (ad) { dbIslem("readwrite", function (st) { return st.delete(kod + "/" + ad); }); });
       if (sessizler.length) sessizKutu(sessizler.length + " kayıt sessiz çıkmıştı; eksik sayıldı. Aynı linkle yalnızca onları yeniden kaydedin.");
+      zipPlanla();
       var onceki = ilerlemeOku();
       if (onceki && onceki.kabul) { durum.kabul = true; durum.yas = onceki.yas || ""; durum.cinsiyet = onceki.cinsiyet || ""; mikTestEkrani(); } else goster("onay");
     });
@@ -762,15 +803,16 @@ function hataMetni(e) {
     el("kaydet").addEventListener("click", kaydetTikla); el("dinle").addEventListener("click", dinle); el("yeniden").addEventListener("click", yeniden);
     el("onceki").addEventListener("click", function () { git(-1); }); el("sonraki").addEventListener("click", function () { git(1); });
     el("indir").addEventListener("click", indir); el("gonder").addEventListener("click", gonder); el("sil").addEventListener("click", sil);
-    if (uygulamaIciTarayici(navigator.userAgent)) el("iabUyari").classList.remove("gizli");
+    var iab = uygulamaIciTarayici(navigator.userAgent);
+    chromeBagla();
+    if (iab) { el("iabUyari").classList.remove("gizli"); el("iabIndirNot").classList.remove("gizli"); }     // açılışta, ilk kayıttan ÖNCE; kayda yine izin var, uyarı ekranda kalır
     var denemeDosya = null;
     try { denemeDosya = new File([new Uint8Array(1)], "d.zip", {type: "application/zip"}); } catch (e) { denemeDosya = null; }
     if (!denemeDosya || !dosyaPaylasilabilir(navigator, denemeDosya)) {            // paylaşım yok: İndir öne çıkar, Gönder = indir
       el("gonder").textContent = "Şimdiye kadarkileri indir (zip)"; el("indir").classList.add("gizli");
     }
-    durum.gonderEngeli = gonderEngeli(navigator.userAgent, !!denemeDosya && dosyaPaylasilabilir(navigator, denemeDosya));
-    window.addEventListener("error", function (ev) { indirHatasi(ev.error || ev.message); });
-    window.addEventListener("unhandledrejection", function (ev) { indirHatasi(ev.reason); });
+    window.addEventListener("error", function (ev) { durum.sonHata = hataMetni(ev.error || ev.message); });          // kullanıcıya gösterilmez; yalnızca kayda geçer
+    window.addEventListener("unhandledrejection", function (ev) { durum.sonHata = hataMetni(ev.reason); });
   }
   baslat();
 })();
