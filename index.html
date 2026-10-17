@@ -34,6 +34,7 @@ progress{width:100%;height:14px}
 #seviye{height:8px;background:var(--cizgi);border-radius:4px;overflow:hidden;margin:10px 0}
 #seviye>div{height:100%;width:0;background:var(--iyi)}
 .uyari{color:var(--kotu);font-weight:600}
+a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;background:var(--vurgu);color:var(--vurgu-yazi);font-weight:700;font-size:1.25rem;text-decoration:none;min-height:56px;box-sizing:border-box}
 </style>
 </head>
 <body>
@@ -42,6 +43,19 @@ progress{width:100%;height:14px}
 
 <section id="iabUyari" class="kart uyari gizli" role="alert"><b>Lütfen sağ üstteki menüden 'Chrome'da aç' / 'Safari'de aç' seçin, yoksa dosya inmez.</b>
   Bu sayfa bir uygulamanın (WhatsApp, Instagram, Facebook...) içinde açılmış görünüyor; kayıtları orada gönderemeyebilirsiniz.</section>
+
+<section id="chromeKart" class="kart gizli" role="alert">
+  <p class="uyari" id="chromeNeden"></p>
+  <a id="chromeAc" class="buyuk" href="#" rel="noopener">Chrome'da aç</a>
+  <p class="kucuk" id="chromeNot">Aynı adres (kodunuz korunur) tarayıcıda açılır. Tarayıcıya özel olduğu için, bu tarayıcıda yaptığınız kayıtlar orada görünmez; orada baştan kaydedin.</p>
+</section>
+
+<section id="chromeEkrani" class="kart gizli">
+  <p><b>Kayıtları gönderebilmek için Chrome'da açın</b></p>
+  <p>Bu uygulama içi tarayıcıda dosya gönderme yok; kayıtlar buradan gönderilemez. Kayıtlar tarayıcıya özeldir: şimdi kayıt yapıp sonra Chrome'a geçerseniz
+  kaydettikleriniz <b>kaybolur</b>. Bu yüzden kayıttan ÖNCE geçin.</p>
+  <a id="chromeAc2" class="buyuk" href="#" rel="noopener">Chrome'da aç</a>
+</section>
 
 <section id="hata" class="kart uyari gizli"></section>
 
@@ -57,6 +71,7 @@ progress{width:100%;height:14px}
   yalnızca bir kod (aşağıda) kullanılır; silme isteğinde bu kodu söylemeniz yeterlidir.</p>
   <p>Kodunuz: <b id="kodGoster"></b></p>
   <p class="kucuk" id="kodNot"></p>
+  <p id="sureNot"></p>
   <label for="yas">Yaş aralığı (isteğe bağlı)</label>
   <select id="yas">
     <option value="">Belirtmek istemiyorum</option><option>18-25</option><option>26-35</option><option>36-50</option><option>51+</option>
@@ -69,6 +84,14 @@ progress{width:100%;height:14px}
   <div class="onay" id="yetiskinBlok"><input type="checkbox" id="yetiskinKutu"><label for="yetiskinKutu" style="margin:0">18 yaşından büyüğüm.</label></div>
   <div class="onay gizli" id="veliBlok"><input type="checkbox" id="veliKutu"><label for="veliKutu" style="margin:0">Velisiyim, onay veriyorum ve yanındayım.</label></div>
   <button class="ana" id="basla" disabled>Başla</button>
+</section>
+
+<section id="mikTest" class="kart gizli">
+  <p><b>Mikrofon testi</b></p>
+  <p id="testMetin">Önce mikrofonu açın, sonra yüksek sesle "Merhaba" deyin.</p>
+  <progress id="testSeviye" value="0" max="100"></progress>
+  <button class="ana" id="testAc" style="width:100%">Mikrofonu aç</button>
+  <button class="ana" id="testDevam" style="width:100%;margin-top:8px" disabled>Devam</button>
 </section>
 
 <section id="kayitEkrani" class="gizli">
@@ -90,6 +113,7 @@ progress{width:100%;height:14px}
       <button id="sonraki" class="ana" disabled>Sonraki →</button>
     </div>
     <div id="durum" class="kucuk" aria-live="polite"></div>
+    <div id="sessizKutu" class="uyari gizli" role="alert"></div>
     <audio id="oynatici" class="gizli"></audio>
   </div>
   <div class="kart">
@@ -100,6 +124,7 @@ progress{width:100%;height:14px}
     <div class="satir"><button id="sil" class="kucuk">Tüm kayıtlarımı bu telefondan sil</button></div>
   </div>
 </section>
+<p class="kucuk" id="surumNot" style="text-align:center;opacity:.6"></p>
 </main>
 
 <script id="veri" type="application/json">{"surum":2,"kelimeler":[{"kelime":"ra","seviye":"hece","slug":"ra","soylenen":{"dogru":"ra","r-y":"ya","r-l":"la","r-yok":"a"},"beklenen":{"dogru":"r a","r-y":"j a","r-l":"l a","r-yok":"a"},"cocuk":true},{"kelime":"re","seviye":"hece","slug":"re","soylenen":{"dogru":"re","r-y":"ye","r-l":"le","r-yok":"e"},"beklenen":{"dogru":"r e","r-y":"j e","r-l":"l e","r-yok":"e"},"cocuk":true},{"kelime":"ri","seviye":"hece","slug":"ri","soylenen":{"dogru":"ri","r-y":"yi","r-l":"li","r-yok":"i"},"beklenen":{"dogru":"r i","r-y":"j i","r-l":"l i","r-yok":"i"},"cocuk":true},{"kelime":"ro","seviye":"hece","slug":"ro","soylenen":{"dogru":"ro","r-y":"yo","r-l":"lo","r-yok":"o"},"beklenen":{"dogru":"r o","r-y":"j o","r-l":"l o","r-yok":"o"},"cocuk":true},{"kelime":"ru","seviye":"hece","slug":"ru","soylenen":{"dogru":"ru","r-y":"yu","r-l":"lu","r-yok":"u"},"beklenen":{"dogru":"r u","r-y":"j u","r-l":"l u","r-yok":"u"},"cocuk":true},{"kelime":"resim","seviye":"kelime_basi","slug":"resim","soylenen":{"dogru":"resim","r-y":"yesim","r-l":"lesim","r-yok":"esim"},"beklenen":{"dogru":"r e s i m","r-y":"j e s i m","r-l":"l e s i m","r-yok":"e s i m"},"cocuk":true},{"kelime":"renk","seviye":"kelime_basi","slug":"renk","soylenen":{"dogru":"renk","r-y":"yenk","r-l":"lenk","r-yok":"enk"},"beklenen":{"dogru":"r e n k","r-y":"j e n k","r-l":"l e n k","r-yok":"e n k"},"cocuk":true},{"kelime":"roket","seviye":"kelime_basi","slug":"roket","soylenen":{"dogru":"roket","r-y":"yoket","r-l":"loket","r-yok":"oket"},"beklenen":{"dogru":"r o k e t","r-y":"j o k e t","r-l":"l o k e t","r-yok":"o k e t"},"cocuk":true},{"kelime":"robot","seviye":"kelime_basi","slug":"robot","soylenen":{"dogru":"robot","r-y":"yobot","r-l":"lobot","r-yok":"obot"},"beklenen":{"dogru":"r o b o t","r-y":"j o b o t","r-l":"l o b o t","r-yok":"o b o t"},"cocuk":false},{"kelime":"radyo","seviye":"kelime_basi","slug":"radyo","soylenen":{"dogru":"radyo","r-y":"yadyo","r-l":"ladyo","r-yok":"adyo"},"beklenen":{"dogru":"r a d j o","r-y":"j a d j o","r-l":"l a d j o","r-yok":"a d j o"},"cocuk":true},{"kelime":"rakam","seviye":"kelime_basi","slug":"rakam","soylenen":{"dogru":"rakam","r-y":"yakam","r-l":"lakam","r-yok":"akam"},"beklenen":{"dogru":"r a k a m","r-y":"j a k a m","r-l":"l a k a m","r-yok":"a k a m"},"cocuk":false},{"kelime":"ruj","seviye":"kelime_basi","slug":"ruj","soylenen":{"dogru":"ruj","r-y":"yuj","r-l":"luj","r-yok":"uj"},"beklenen":{"dogru":"r u ʒ","r-y":"j u ʒ","r-l":"l u ʒ","r-yok":"u ʒ"},"cocuk":false},{"kelime":"araba","seviye":"kelime_orta","slug":"araba","soylenen":{"dogru":"araba","r-y":"ayaba","r-l":"alaba","r-yok":"aaba"},"beklenen":{"dogru":"a r a b a","r-y":"a j a b a","r-l":"a l a b a","r-yok":"a a b a"},"cocuk":true},{"kelime":"harita","seviye":"kelime_orta","slug":"harita","soylenen":{"dogru":"harita","r-y":"hayita","r-l":"halita","r-yok":"haita"},"beklenen":{"dogru":"h a r i t a","r-y":"h a j i t a","r-l":"h a l i t a","r-yok":"h a i t a"},"cocuk":false},{"kelime":"para","seviye":"kelime_orta","slug":"para","soylenen":{"dogru":"para","r-y":"paya","r-l":"pala","r-yok":"paa"},"beklenen":{"dogru":"p a r a","r-y":"p a j a","r-l":"p a l a","r-yok":"p a a"},"cocuk":true},{"kelime":"bere","seviye":"kelime_orta","slug":"bere","soylenen":{"dogru":"bere","r-y":"beye","r-l":"bele","r-yok":"bee"},"beklenen":{"dogru":"b e r e","r-y":"b e j e","r-l":"b e l e","r-yok":"b e e"},"cocuk":false},{"kelime":"dere","seviye":"kelime_orta","slug":"dere","soylenen":{"dogru":"dere","r-y":"deye","r-l":"dele","r-yok":"dee"},"beklenen":{"dogru":"d e r e","r-y":"d e j e","r-l":"d e l e","r-yok":"d e e"},"cocuk":false},{"kelime":"çorap","seviye":"kelime_orta","slug":"corap","soylenen":{"dogru":"çorap","r-y":"çoyap","r-l":"çolap","r-yok":"çoap"},"beklenen":{"dogru":"tʃ o r a p","r-y":"tʃ o j a p","r-l":"tʃ o l a p","r-yok":"tʃ o a p"},"cocuk":true},{"kelime":"sarı","seviye":"kelime_orta","slug":"sari","soylenen":{"dogru":"sarı","r-y":"sayı","r-l":"salı","r-yok":"saı"},"beklenen":{"dogru":"s a r ɯ","r-y":"s a j ɯ","r-l":"s a l ɯ","r-yok":"s a ɯ"},"cocuk":false},{"kelime":"kar","seviye":"kelime_son","slug":"kar","soylenen":{"dogru":"kar","r-y":"kay","r-l":"kal","r-yok":"ka"},"beklenen":{"dogru":"k a r","r-y":"k a j","r-l":"k a l","r-yok":"k a"},"cocuk":true},{"kelime":"mor","seviye":"kelime_son","slug":"mor","soylenen":{"dogru":"mor","r-y":"moy","r-l":"mol","r-yok":"mo"},"beklenen":{"dogru":"m o r","r-y":"m o j","r-l":"m o l","r-yok":"m o"},"cocuk":true},{"kelime":"yer","seviye":"kelime_son","slug":"yer","soylenen":{"dogru":"yer","r-y":"yey","r-l":"yel","r-yok":"ye"},"beklenen":{"dogru":"j e r","r-y":"j e j","r-l":"j e l","r-yok":"j e"},"cocuk":false},{"kelime":"bir","seviye":"kelime_son","slug":"bir","soylenen":{"dogru":"bir","r-y":"biy","r-l":"bil","r-yok":"bi"},"beklenen":{"dogru":"b i r","r-y":"b i j","r-l":"b i l","r-yok":"b i"},"cocuk":false},{"kelime":"nar","seviye":"kelime_son","slug":"nar","soylenen":{"dogru":"nar","r-y":"nay","r-l":"nal","r-yok":"na"},"beklenen":{"dogru":"n a r","r-y":"n a j","r-l":"n a l","r-yok":"n a"},"cocuk":true},{"kelime":"kır","seviye":"kelime_son","slug":"kir","soylenen":{"dogru":"kır","r-y":"kıy","r-l":"kıl","r-yok":"kı"},"beklenen":{"dogru":"k ɯ r","r-y":"k ɯ j","r-l":"k ɯ l","r-yok":"k ɯ"},"cocuk":false},{"kelime":"kırmızı araba geldi","seviye":"cumle","slug":"kirmizi-araba-geldi","soylenen":{"dogru":"kırmızı araba geldi","r-y":"kıymızı ayaba geldi","r-l":"kılmızı alaba geldi","r-yok":"kımızı aaba geldi"},"beklenen":{"dogru":"k ɯ r m ɯ z ɯ a r a b a g e l d i","r-y":"k ɯ j m ɯ z ɯ a j a b a g e l d i","r-l":"k ɯ l m ɯ z ɯ a l a b a g e l d i","r-yok":"k ɯ m ɯ z ɯ a a b a g e l d i"},"cocuk":true},{"kelime":"arkadaşım resim çizdi","seviye":"cumle","slug":"arkadasim-resim-cizdi","soylenen":{"dogru":"arkadaşım resim çizdi","r-y":"aykadaşım yesim çizdi","r-l":"alkadaşım lesim çizdi","r-yok":"akadaşım esim çizdi"},"beklenen":{"dogru":"a r k a d a ʃ ɯ m r e s i m tʃ i z d i","r-y":"a j k a d a ʃ ɯ m j e s i m tʃ i z d i","r-l":"a l k a d a ʃ ɯ m l e s i m tʃ i z d i","r-yok":"a k a d a ʃ ɯ m e s i m tʃ i z d i"},"cocuk":false},{"kelime":"robot yere düştü","seviye":"cumle","slug":"robot-yere-dustu","soylenen":{"dogru":"robot yere düştü","r-y":"yobot yeye düştü","r-l":"lobot yele düştü","r-yok":"obot yee düştü"},"beklenen":{"dogru":"r o b o t j e r e d y ʃ t y","r-y":"j o b o t j e j e d y ʃ t y","r-l":"l o b o t j e l e d y ʃ t y","r-yok":"o b o t j e e d y ʃ t y"},"cocuk":true},{"kelime":"yeşil çorap kuru","seviye":"cumle","slug":"yesil-corap-kuru","soylenen":{"dogru":"yeşil çorap kuru","r-y":"yeşil çoyap kuyu","r-l":"yeşil çolap kulu","r-yok":"yeşil çoap kuu"},"beklenen":{"dogru":"j e ʃ i l tʃ o r a p k u r u","r-y":"j e ʃ i l tʃ o j a p k u j u","r-l":"j e ʃ i l tʃ o l a p k u l u","r-yok":"j e ʃ i l tʃ o a p k u u"},"cocuk":false},{"kelime":"baba radyo dinler","seviye":"cumle","slug":"baba-radyo-dinler","soylenen":{"dogru":"baba radyo dinler","r-y":"baba yadyo dinley","r-l":"baba ladyo dinlel","r-yok":"baba adyo dinle"},"beklenen":{"dogru":"b a b a r a d j o d i n l e r","r-y":"b a b a j a d j o d i n l e j","r-l":"b a b a l a d j o d i n l e l","r-yok":"b a b a a d j o d i n l e"},"cocuk":true}],"talimatlar":[{"kod":"dogru","ad":"Doğru söyle","adet":2},{"kod":"r-y","ad":"r yerine y söyle","adet":1},{"kod":"r-l","ad":"r yerine l söyle","adet":1},{"kod":"r-yok","ad":"r'yi söyleme","adet":1}],"cocukTalimat":{"kod":"soyle","ad":"Kelimeyi söyle","adet":2}}</script>
@@ -163,8 +188,17 @@ function kodBelirle(arama, depo, rastgeleBayt) {
 function dosyaAdi(kod, slug, talimat, n) { return kod + "_" + slug + "_" + talimat + "_" + n + ".wav"; }
 
 // veri: {kelimeler:[{kelime,seviye,slug,beklenen:{talimat:"j e s i m"},soylenen:{talimat:"yesim"}}], talimatlar:[{kod,ad,adet}]}
-function maddeler(veri, kod, cocuk) {
+function maddeler(veri, kod, cocuk, kisa) {
   var cikti = [];
+  if (kisa && !cocuk) {   // kısa sürüm: seçilen 15 kelime x talimat başına 1 kayıt
+    kisaSecim(veri, kod).forEach(function (k) {
+      veri.talimatlar.forEach(function (t) {
+        cikti.push({kelime: k.kelime, seviye: k.seviye, talimat: t.kod, talimatAd: t.ad, n: 1, soylenen: k.soylenen[t.kod],
+                    beklenen: k.beklenen[t.kod], dosya: dosyaAdi(kod, k.slug, t.kod, 1)});
+      });
+    });
+    return cikti;
+  }
   if (cocuk) {   // çocuk sürümü: 'cocuk' işaretli öğeler, her biri "kelimeyi söyle" x2; söylenecek/beklenen yok (etiket sonradan verilir)
     var c = veri.cocukTalimat;
     veri.kelimeler.forEach(function (k) {
@@ -228,6 +262,52 @@ function tepeDb(x) {
   var t = 0;
   for (var i = 0; i < x.length; i++) { var a = Math.abs(x[i]); if (a > t) t = a; }
   return 20 * Math.log10(Math.max(t, 1e-6));
+}
+
+// Sessizlik ölçütü (sayfa ve toplama_al.py aynı kuralı kullanır): tepe < -45 dBFS YA DA konuşma etkinliği < 0,15 sn.
+// Konuşma etkinliği: 20 ms'lik çerçevelerden RMS'i >= -40 dBFS olanların toplam süresi.
+var SESSIZ_TEPE_DB = -45, KONUSMA_CERCEVE_DB = -40, EN_AZ_KONUSMA_SN = 0.15;
+function konusmaEtkinligiSn(x, hz) {
+  var cerceve = Math.max(1, Math.round(hz * 0.02)), etkin = 0;
+  for (var b = 0; b + cerceve <= x.length; b += cerceve) {
+    var kare = 0;
+    for (var i = b; i < b + cerceve; i++) kare += x[i] * x[i];
+    if (20 * Math.log10(Math.max(Math.sqrt(kare / cerceve), 1e-6)) >= KONUSMA_CERCEVE_DB) etkin += cerceve;
+  }
+  return etkin / hz;
+}
+function sessizMi(x, hz) { return tepeDb(x) < SESSIZ_TEPE_DB || konusmaEtkinligiSn(x, hz) < EN_AZ_KONUSMA_SN; }
+// Saklanmış WAV baytlarından (wavKodla çıktısı: 44 bayt başlık + 16 bit mono) sessizlik denetimi
+function wavSessizMi(bayt) {
+  var dv = new DataView(bayt.buffer, bayt.byteOffset, bayt.byteLength), n = Math.max(0, (bayt.byteLength - 44) >> 1), x = new Float32Array(n);
+  for (var i = 0; i < n; i++) x[i] = dv.getInt16(44 + 2 * i, true) / 32768;
+  return sessizMi(x, 16000);
+}
+// Sayfa sürümü (üretici yerleştirir: v<no>-<şablon özeti>); sayfada küçük yazıyla görünür ve konusmaci.csv'ye 'surum' olarak yazılır
+var SAYFA_SURUMU = "v1-6d7b665c";
+// ?kod korunur: adreste kod yoksa kullanılan kod eklenir (otomatik kod başka tarayıcıda aynı kalsın). Çocuk (?cocuk=1) ve ?kisa=1 aynen kalır; # kısmı atılır.
+function adresKodlu(href, kod) {
+  var h = String(href || "").split("#")[0];
+  if (/[?&]kod=/.test(h) || !kod) return h;
+  return h + (h.indexOf("?") >= 0 ? "&" : "?") + "kod=" + encodeURIComponent(kod);
+}
+// Uygulama içi tarayıcıdan gerçek tarayıcıya geçiş bağlantısı. Android: Chrome intent'i (yedek: aynı https adres); iPhone: "Safari'de aç" + aynı adres.
+function chromeAcBaglantisi(href, kod, ua) {
+  var h = adresKodlu(href, kod), m = /^(https?):\/\/(.*)$/.exec(h);
+  if (/Android/i.test(ua || "") && m) {
+    return {tur: "android", ad: "Chrome'da aç",
+            href: "intent://" + m[2] + "#Intent;scheme=" + m[1] + ";package=com.android.chrome;S.browser_fallback_url=" + encodeURIComponent(h) + ";end"};
+  }
+  if (/iPhone|iPad|iPod/i.test(ua || "")) return {tur: "ios", ad: "Safari'de aç", href: h};
+  return {tur: "diger", ad: "Chrome'da aç", href: h};
+}
+// Kayda başlamadan önce: uygulama içi tarayıcıdaysak ve dosya paylaşımı yoksa kayıtlar gönderilemez -> önce Chrome'a geçilmeli
+function gonderEngeli(ua, paylasilabilir) { return uygulamaIciTarayici(ua) && !paylasilabilir; }
+
+// Mikrofon akımı sağlam mı: iz canlı, susturulmamış ve ses bağlamı çalışıyor
+function akimSaglam(akim, ctxDurum) {
+  var iz = akim && akim.getAudioTracks ? akim.getAudioTracks()[0] : null;
+  return !!(iz && iz.readyState === "live" && iz.muted === false && ctxDurum === "running");
 }
 
 var CRC_TABLOSU = (function () {
@@ -299,9 +379,10 @@ function etiketlerCsv(kod, tamamlananlar) {
 }
 
 // tur: "yetiskin" | "cocuk"; onay: "18+" | "veli" (içe alma bu iki alanı doğrular)
-function konusmaciCsv(kod, yas, cinsiyet, tur, onay) {
-  return csvOlustur(["kod", "yas_araligi", "cinsiyet", "tur", "onay"],
-                    [{kod: kod, yas_araligi: yas || "", cinsiyet: cinsiyet || "", tur: tur || "yetiskin", onay: onay || "18+"}]);
+function konusmaciCsv(kod, yas, cinsiyet, tur, onay, mod, surum) {
+  return csvOlustur(["kod", "yas_araligi", "cinsiyet", "tur", "onay", "mod", "surum"],
+                    [{kod: kod, yas_araligi: yas || "", cinsiyet: cinsiyet || "", tur: tur || "yetiskin", onay: onay || "18+", mod: mod === "kisa" ? "kisa" : "tam",
+                      surum: surum || SAYFA_SURUMU}]);
 }
 
 var COCUK_CSV_ALANLARI = ["kod", "kelime", "seviye", "etiket", "dosya", "sure"];
@@ -312,6 +393,43 @@ function cocukEtiketlerCsv(kod, tamamlananlar) {
     return {kod: kod, kelime: r.madde.kelime, seviye: r.madde.seviye, etiket: "", dosya: r.madde.dosya, sure: r.sure.toFixed(2)};
   }));
 }
+// KISA SÜRÜM: otomatik (g...) kodda ya da ?kisa=1 ile; çocuk sürümü hiçbir zaman kısa olmaz. y## ve c## kodları ?kisa=1 olmadan tam sürümde kalır.
+function kisaIstendi(arama) { return /[?&]kisa=1(?:[&#]|$)/.test(arama || ""); }
+function kisaMi(arama, kod, cocuk) { return cocuk !== true && (otoKodGecerli(kod) || kisaIstendi(arama)); }
+
+// Kısa sürüm: 15 kelime = 4 kelime_basi + 4 kelime_orta + 4 kelime_son + 3 cümle (yetmezse eldeki kadar); her biri 4 kayıt (doğru x1, r-y, r-l, r-yok) = 60 madde.
+var KISA_DAGILIM = [["kelime_basi", 4], ["kelime_orta", 4], ["kelime_son", 4], ["cumle", 3]];
+// Kodun kendisinden tohum: FNV-1a 32 bit
+function kodTohumu(kod) {
+  var h = 0x811c9dc5;
+  for (var i = 0; i < kod.length; i++) { h ^= kod.charCodeAt(i); h = Math.imul(h, 0x01000193) >>> 0; }
+  return h >>> 0;
+}
+// Tohumlu rastgele sayı üreteci (mulberry32): her çağrıda [0,1)
+function tohumluUreteci(tohum) {
+  var a = tohum >>> 0;
+  return function () {
+    a = (a + 0x6D2B79F5) >>> 0;
+    var t = a;
+    t = Math.imul(t ^ (t >>> 15), t | 1);
+    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+// Aynı kod -> aynı seçim. Dönüş: seçilen kelime nesneleri (listedeki sırayla).
+function kisaSecim(veri, kod) {
+  var secilen = {};
+  KISA_DAGILIM.forEach(function (d, i) {
+    var aday = veri.kelimeler.filter(function (k) { return k.seviye === d[0]; });
+    var uret = tohumluUreteci(kodTohumu(kod) + Math.imul(i + 1, 0x9E3779B1));
+    for (var j = aday.length - 1; j > 0; j--) {        // Fisher-Yates
+      var x = Math.floor(uret() * (j + 1)), t = aday[j]; aday[j] = aday[x]; aday[x] = t;
+    }
+    aday.slice(0, d[1]).forEach(function (k) { secilen[k.slug] = true; });
+  });
+  return veri.kelimeler.filter(function (k) { return secilen[k.slug]; });
+}
+
 // Uygulama içi tarayıcı (WhatsApp, Instagram, Facebook, Messenger, Snapchat, Line, WeChat...): dosya indirme çoğunlukla çalışmaz.
 function uygulamaIciTarayici(ua) { return /FBAN|FBAV|FB_IAB|FBIOS|Instagram|WhatsApp|Messenger|Snapchat|Line\/|MicroMessenger|Twitter|TikTok|musical_ly/i.test(ua || ""); }
 // Dosya paylaşımı (navigator.share + canShare ile dosya) bu tarayıcıda var mı? dosya: deneme File nesnesi.
@@ -328,7 +446,7 @@ function hataMetni(e) {
 
 (function () {
   var VERI = JSON.parse(document.getElementById("veri").textContent);
-  var HEDEF_HZ = 16000, SESSIZ_DB = -45;
+  var HEDEF_HZ = 16000;
   var OTOKOD_ANAHTARI = "toplama:otokod";
   var depo = {
     oku: function () { try { return localStorage.getItem(OTOKOD_ANAHTARI); } catch (e) { return null; } },
@@ -340,8 +458,9 @@ function hataMetni(e) {
     return b;
   };
   var kodSonucu = kodBelirle(location.search, depo, rastgeleBayt), kod = kodSonucu.kod, cocukModu = kodSonucu.cocuk === true;
+  var kisaModu = kodSonucu.kod ? kisaMi(location.search, kodSonucu.kod, cocukModu) : false;
   var el = function (id) { return document.getElementById(id); };
-  var durum = {liste: [], kayitlar: {}, idx: 0, yas: "", cinsiyet: "", kabul: false};
+  var durum = {liste: [], kayitlar: {}, idx: 0, yas: "", cinsiyet: "", kabul: false, mikTestGecti: false};
   var depoAnahtar = "toplama:" + kod;
 
   // ---------- kalıcı depo: IndexedDB (kayıtlar) + localStorage (ilerleme); ikisi de yoksa bellekte çalışır
@@ -394,37 +513,95 @@ function hataMetni(e) {
   }
 
   // ---------- mikrofon
-  var mik = {akim: null, ctx: null, isleyici: null, parcalar: [], kaydediyor: false, hz: 0};
-  function mikAc() {
-    if (mik.akim) { if (mik.ctx.state === "suspended") mik.ctx.resume(); return Promise.resolve(); }
-    // AudioContext TIKLAMA İÇİNDE, eşzamanlı oluşturulup sürdürülür (iOS Safari / Chrome otomatik oynatma kuralı: izin isteminden sonra
-    // oluşturulursa askıda kalabilir ve hiç ses gelmez)
-    var AC = window.AudioContext || window.webkitAudioContext;
-    if (!mik.ctx) mik.ctx = new AC();
-    if (mik.ctx.state === "suspended") mik.ctx.resume();
+  var mik = {akim: null, ctx: null, isleyici: null, parcalar: [], kaydediyor: false, hz: 0, test: false, testSn: 0, sessizArdisik: 0};
+  // Akımı bırak: izler durdurulur, işleyici ayrılır; bir sonraki mikAc() mikrofonu getUserMedia ile yeniden açar
+  function mikSifirla() {
+    try { if (mik.akim) mik.akim.getTracks().forEach(function (t) { t.onended = null; t.onmute = null; t.stop(); }); } catch (e) { /* yok say */ }
+    try { if (mik.isleyici) { mik.isleyici.onaudioprocess = null; mik.isleyici.disconnect(); } } catch (e) { /* yok say */ }
+    mik.akim = null; mik.isleyici = null;
+  }
+  function mikYeniAc() {
     return navigator.mediaDevices.getUserMedia({audio: {channelCount: 1, echoCancellation: false, noiseSuppression: false, autoGainControl: false}})
       .then(function (akim) {
         mik.akim = akim; mik.hz = mik.ctx.sampleRate;
+        var iz = akim.getAudioTracks()[0];
+        if (iz) { iz.onended = mikSifirla; iz.onmute = mikSifirla; }          // iz bittiyse/susturulduysa bir sonraki kayıtta yeniden açılır
         if (mik.ctx.state === "suspended") mik.ctx.resume();
         var kaynak = mik.ctx.createMediaStreamSource(akim), sessiz = mik.ctx.createGain();
         sessiz.gain.value = 0;
         mik.isleyici = mik.ctx.createScriptProcessor(4096, 1, 1);
         mik.isleyici.onaudioprocess = function (e) {
-          if (!mik.kaydediyor) return;
+          if (!mik.kaydediyor && !mik.test) return;
           var g = e.inputBuffer.getChannelData(0), kopya = new Float32Array(g);
-          mik.parcalar.push(kopya);
           var t = 0; for (var i = 0; i < kopya.length; i++) { var a = Math.abs(kopya[i]); if (a > t) t = a; }
-          el("seviye").firstChild.style.width = Math.min(100, Math.round(t * 140)) + "%";
+          var yuzde = Math.min(100, Math.round(t * 140));
+          if (mik.kaydediyor) { mik.parcalar.push(kopya); el("seviye").firstChild.style.width = yuzde + "%"; }
+          if (mik.test) {
+            el("testSeviye").value = yuzde;
+            mik.testSn += konusmaEtkinligiSn(kopya, mik.hz);
+            if (mik.testSn >= EN_AZ_KONUSMA_SN) mikTestGecti();
+          }
         };
         kaynak.connect(mik.isleyici); mik.isleyici.connect(sessiz); sessiz.connect(mik.ctx.destination);
       });
+  }
+  // HER kayıttan önce çağrılır: eski akım bırakılır, mikrofon getUserMedia ile YENİDEN açılır (ölü/susturulmuş akım kalmaz); kayıt bitince durdur() izleri durdurur.
+  function mikAc() {
+    // AudioContext TIKLAMA İÇİNDE, eşzamanlı oluşturulup sürdürülür (iOS Safari / Chrome otomatik oynatma kuralı)
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!mik.ctx || mik.ctx.state === "closed") { mikSifirla(); mik.ctx = new AC(); }
+    var devam = mik.ctx.state === "suspended" ? Promise.resolve(mik.ctx.resume()).catch(function () { /* durum aşağıda denetlenir */ }) : Promise.resolve();
+    return devam.then(function () {
+      mikSifirla();
+      return mikYeniAc();
+    }).then(function () {
+      if (!akimSaglam(mik.akim, mik.ctx.state)) { mikSifirla(); return mikYeniAc(); }       // iz canlı değil / susturulmuş / bağlam çalışmıyor: bir kez daha sıfırdan aç
+    });
+  }
+  document.addEventListener("visibilitychange", function () {       // sayfa geri gelince (başka uygulamadan dönüş) akım bayat olabilir
+    if (document.visibilityState === "visible" && !mik.kaydediyor) mikSifirla();
+  });
+
+  function chromeGoster(neden) {
+    var b = chromeAcBaglantisi(location.href, kod, navigator.userAgent);
+    ["chromeAc", "chromeAc2"].forEach(function (id) { el(id).href = b.href; el(id).textContent = b.ad; });
+    el("chromeNeden").textContent = neden;
+    if (b.tur === "ios") el("chromeNot").textContent = "Safari'de açılan sayfada kodunuz (" + kod + ") korunur; kayıtları orada baştan alın.";
+    el("chromeKart").classList.remove("gizli");
+  }
+  var testZaman = null;
+  function mikTestGecti() {
+    clearTimeout(testZaman);
+    mik.test = false; durum.mikTestGecti = true; mikSifirla();
+    el("testMetin").textContent = "Mikrofon çalışıyor ✓ Devam edebilirsiniz.";
+    el("testDevam").disabled = false;
+  }
+  function mikTestEkrani() {
+    if (durum.gonderEngeli) { goster("chromeEkrani"); chromeGoster("Bu tarayıcıda dosya gönderme yok."); return; }       // kayıttan ÖNCE
+    goster("mikTest"); mik.test = false; mik.testSn = 0;
+    el("testDevam").disabled = !durum.mikTestGecti;
+    el("testMetin").textContent = durum.mikTestGecti ? "Mikrofon testi geçildi ✓" : 'Önce mikrofonu açın, sonra yüksek sesle "Merhaba" deyin.';
+  }
+  function mikTestBasla() {
+    el("testMetin").textContent = "Mikrofon açılıyor…";
+    clearTimeout(testZaman);
+    mikAc().then(function () {
+      mik.testSn = 0; mik.test = true;
+      el("testMetin").textContent = 'Şimdi yüksek sesle "Merhaba" deyin.';
+      testZaman = setTimeout(function () {                            // 10 sn içinde ses gelmediyse test geçilmedi
+        if (mik.test) { mik.test = false; mikSifirla(); el("testMetin").textContent = "Ses gelmedi."; chromeGoster("Mikrofondan ses gelmiyor. Bu tarayıcı mikrofonu engelliyor olabilir."); }
+      }, 10000);
+    }).catch(function () {
+      el("testMetin").textContent = "Mikrofon açılamadı: izin verdiğinizden emin olun (Ayarlar → tarayıcı → Mikrofon). Sayfa güvenli (https) bağlantıyla açılmış olmalı.";
+      chromeGoster("Mikrofon açılamadı.");
+    });
   }
 
   // ---------- arayüz
   var simdiki = function () { return durum.liste[durum.idx]; };
   var kayitli = function (m) { return !!durum.kayitlar[m.dosya]; };
   function goster(ekran) {
-    ["hata", "onay", "kayitEkrani"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
+    ["hata", "onay", "mikTest", "kayitEkrani", "chromeEkrani"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
   }
   function hata(metin) { el("hata").textContent = metin; goster("hata"); }
   function ciz() {
@@ -447,9 +624,11 @@ function hataMetni(e) {
   }
   function say(metin) { el("durum").textContent = metin || ""; }
 
+  function sessizKutu(metin) { var k = el("sessizKutu"); k.textContent = metin || ""; k.classList.toggle("gizli", !metin); }
   function kaydetTikla() {
     if (mik.kaydediyor) { durdur(); return; }
-    say("Mikrofon açılıyor…");
+    if (!durum.mikTestGecti) { mikTestEkrani(); return; }          // mikrofon testi geçilmeden kayda başlanamaz
+    say("Mikrofon denetleniyor…");
     mikAc().then(function () { mik.parcalar = []; mik.kaydediyor = true; say("Kaydediliyor… söyleyin, sonra Durdur'a basın."); ciz(); })
       .catch(function (e) {
         say("Mikrofon açılamadı: izin verdiğinizden emin olun (Ayarlar → tarayıcı → Mikrofon). Sayfa güvenli (https) bağlantıyla açılmış olmalı.");
@@ -459,12 +638,22 @@ function hataMetni(e) {
   function durdur() {
     mik.kaydediyor = false;
     var ham = birlestir(mik.parcalar), x = yenidenOrnekle(ham, mik.hz, HEDEF_HZ), m = simdiki();
+    mikSifirla();                                                     // kayıt bitti: izleri durdur (bir sonraki kayıtta mikrofon yeniden açılır)
     if (x.length < HEDEF_HZ * 0.3) { say("Kayıt çok kısa; yeniden alın."); ciz(); return; }
-    var sessizMi = tepeDb(x) < SESSIZ_DB;
+    if (sessizMi(x, HEDEF_HZ)) {                                      // sessiz kayıt SAKLANMAZ
+      mik.sessizArdisik++;
+      say("");
+      if (mik.sessizArdisik >= 2) {
+        sessizKutu("Ses gelmedi, tekrar kaydedin. Linki WhatsApp içinde değil Chrome'da açın; başka uygulama mikrofonu kullanıyor olabilir.");
+        chromeGoster("Üst üste iki kayıt sessiz geldi.");
+      } else sessizKutu("Ses gelmedi, tekrar kaydedin");
+      ciz(); return;
+    }
+    mik.sessizArdisik = 0; sessizKutu("");
     var wav = wavKodla(x, HEDEF_HZ), sure = x.length / HEDEF_HZ;
     durum.kayitlar[m.dosya] = {wav: wav, sure: sure};
     kayitKaydet(m.dosya, {wav: wav.buffer.slice(wav.byteOffset, wav.byteOffset + wav.byteLength), sure: sure});
-    say(sessizMi ? "Ses çok kısık ya da hiç gelmedi: mikrofona yaklaşıp yeniden alın." : "Kaydedildi (" + sure.toFixed(1) + " sn). Dinleyebilir ya da yeniden alabilirsiniz.");
+    say("Kaydedildi (" + sure.toFixed(1) + " sn). Dinleyebilir ya da yeniden alabilirsiniz.");
     ciz();
   }
   function dinle() {
@@ -483,12 +672,12 @@ function hataMetni(e) {
   function git(d) { durum.idx = Math.max(0, Math.min(durum.liste.length - 1, durum.idx + d)); say(""); ciz(); }
 
   function zipHazirla() {
-    var tamamlananlar = durum.liste.filter(kayitli).map(function (m) { return {madde: m, sure: durum.kayitlar[m.dosya].sure}; });
+    var tamamlananlar = durum.liste.filter(function (m) { return kayitli(m) && !wavSessizMi(durum.kayitlar[m.dosya].wav); }).map(function (m) { return {madde: m, sure: durum.kayitlar[m.dosya].sure}; });
     if (!tamamlananlar.length) return null;
     var dosyalar = tamamlananlar.map(function (r) { return {ad: r.madde.dosya, veri: new Uint8Array(durum.kayitlar[r.madde.dosya].wav)}; });
     dosyalar.push({ad: "etiketler.csv", veri: utf8(cocukModu ? cocukEtiketlerCsv(kod, tamamlananlar) : etiketlerCsv(kod, tamamlananlar))});
-    dosyalar.push({ad: "konusmaci.csv", veri: utf8(cocukModu ? konusmaciCsv(kod, durum.yas, durum.cinsiyet, "cocuk", "veli")
-                                                              : konusmaciCsv(kod, durum.yas, durum.cinsiyet, "yetiskin", "18+"))});
+    dosyalar.push({ad: "konusmaci.csv", veri: utf8(cocukModu ? konusmaciCsv(kod, durum.yas, durum.cinsiyet, "cocuk", "veli", "tam", SAYFA_SURUMU)
+                                                              : konusmaciCsv(kod, durum.yas, durum.cinsiyet, "yetiskin", "18+", kisaModu ? "kisa" : "tam", SAYFA_SURUMU))});
     return {blob: new Blob([zipOlustur(dosyalar)], {type: "application/zip"}), ad: kod + "_toplama.zip", sayi: dosyalar.length};
   }
   function indirHatasi(e) { var h = el("indirHata"); h.textContent = e ? "Hata: " + hataMetni(e) : ""; h.classList.toggle("gizli", !e); }
@@ -533,7 +722,9 @@ function hataMetni(e) {
   function baslat() {
     if (!kod) { hata(kodSonucu.hata); return; }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) { hata("Bu tarayıcı mikrofon kaydını desteklemiyor ya da sayfa güvenli (https) bağlantıyla açılmadı. Android Chrome ya da iPhone Safari ile, https bağlantısıyla açın."); return; }
-    durum.liste = maddeler(VERI, kod, cocukModu);
+    durum.liste = maddeler(VERI, kod, cocukModu, kisaModu);
+    el("sureNot").textContent = kisaModu ? "Kısa sürüm: " + durum.liste.length / VERI.talimatlar.length + " kelime, " + durum.liste.length + " kısa kayıt; yaklaşık 8 dakika sürer."
+      : "Toplam " + durum.liste.length + " kısa kayıt.";
     if (cocukModu) {   // çocuk sürümü: veli onayı metni ve kutusu, çocuk yaş aralıkları; yetişkin kutusu gizlenir
       el("onayCocuk").classList.remove("gizli"); el("onayYetiskin").classList.add("gizli");
       el("veliBlok").classList.remove("gizli"); el("yetiskinBlok").classList.add("gizli");
@@ -547,9 +738,16 @@ function hataMetni(e) {
         : "UYARI: Kod bu tarayıcıda saklanamadı (gizli sekme olabilir); sayfa yenilenirse kod değişir. Kodu not alın ve aynı sekmeyi kapatmayın.";
     }
     dbAc().then(kayitlariOku).then(function (k) {
-      Object.keys(k).forEach(function (ad) { durum.kayitlar[ad] = {wav: new Uint8Array(k[ad].wav), sure: k[ad].sure}; });
+      var sessizler = [];
+      Object.keys(k).forEach(function (ad) {
+        var wav = new Uint8Array(k[ad].wav);
+        if (wavSessizMi(wav)) { sessizler.push(ad); return; }           // sessiz kayıt "kaydedilmemiş" sayılır (listede eksik görünür)
+        durum.kayitlar[ad] = {wav: wav, sure: k[ad].sure};
+      });
+      sessizler.forEach(function (ad) { dbIslem("readwrite", function (st) { return st.delete(kod + "/" + ad); }); });
+      if (sessizler.length) sessizKutu(sessizler.length + " kayıt sessiz çıkmıştı; eksik sayıldı. Aynı linkle yalnızca onları yeniden kaydedin.");
       var onceki = ilerlemeOku();
-      if (onceki && onceki.kabul) { durum.kabul = true; durum.yas = onceki.yas || ""; durum.cinsiyet = onceki.cinsiyet || ""; kayitEkraninaGec(); } else goster("onay");
+      if (onceki && onceki.kabul) { durum.kabul = true; durum.yas = onceki.yas || ""; durum.cinsiyet = onceki.cinsiyet || ""; mikTestEkrani(); } else goster("onay");
     });
     var ozelKutu = function () { return el(cocukModu ? "veliKutu" : "yetiskinKutu"); };   // zorunlu özel onay: çocukta veli, yetişkinde 18+
     var onayGuncelle = function () { el("basla").disabled = !baslayabilir(el("kabul").checked, ozelKutu().checked); };
@@ -557,8 +755,10 @@ function hataMetni(e) {
     el("veliKutu").addEventListener("change", onayGuncelle); onayGuncelle();
     el("basla").addEventListener("click", function () {
       if (!baslayabilir(el("kabul").checked, ozelKutu().checked)) return;   // zorunlu kutular işaretli değilse hiçbir şey olmaz
-      durum.kabul = true; durum.yas = el("yas").value; durum.cinsiyet = el("cinsiyet").value; kayitEkraninaGec();
+      durum.kabul = true; durum.yas = el("yas").value; durum.cinsiyet = el("cinsiyet").value; mikTestEkrani();
     });
+    el("surumNot").textContent = "Sürüm " + SAYFA_SURUMU;
+    el("testAc").addEventListener("click", mikTestBasla); el("testDevam").addEventListener("click", function () { if (durum.mikTestGecti) kayitEkraninaGec(); });
     el("kaydet").addEventListener("click", kaydetTikla); el("dinle").addEventListener("click", dinle); el("yeniden").addEventListener("click", yeniden);
     el("onceki").addEventListener("click", function () { git(-1); }); el("sonraki").addEventListener("click", function () { git(1); });
     el("indir").addEventListener("click", indir); el("gonder").addEventListener("click", gonder); el("sil").addEventListener("click", sil);
@@ -568,6 +768,7 @@ function hataMetni(e) {
     if (!denemeDosya || !dosyaPaylasilabilir(navigator, denemeDosya)) {            // paylaşım yok: İndir öne çıkar, Gönder = indir
       el("gonder").textContent = "Şimdiye kadarkileri indir (zip)"; el("indir").classList.add("gizli");
     }
+    durum.gonderEngeli = gonderEngeli(navigator.userAgent, !!denemeDosya && dosyaPaylasilabilir(navigator, denemeDosya));
     window.addEventListener("error", function (ev) { indirHatasi(ev.error || ev.message); });
     window.addEventListener("unhandledrejection", function (ev) { indirHatasi(ev.reason); });
   }
