@@ -264,9 +264,9 @@ function tepeDb(x) {
   return 20 * Math.log10(Math.max(t, 1e-6));
 }
 
-// Sessizlik ölçütü (sayfa ve toplama_al.py aynı kuralı kullanır): tepe < -45 dBFS YA DA konuşma etkinliği < 0,15 sn.
-// Konuşma etkinliği: 20 ms'lik çerçevelerden RMS'i >= -40 dBFS olanların toplam süresi.
-var SESSIZ_TEPE_DB = -45, KONUSMA_CERCEVE_DB = -40, EN_AZ_KONUSMA_SN = 0.15;
+// Sessizlik ölçütü (sayfa ve toplama_al.py aynı kuralı kullanır): tepe < -50 dBFS YA DA konuşma etkinliği < 0,15 sn.
+// Konuşma etkinliği: 20 ms'lik çerçevelerden RMS'i >= -45 dBFS olanların toplam süresi.
+var SESSIZ_TEPE_DB = -50, KONUSMA_CERCEVE_DB = -45, EN_AZ_KONUSMA_SN = 0.15;
 function konusmaEtkinligiSn(x, hz) {
   var cerceve = Math.max(1, Math.round(hz * 0.02)), etkin = 0;
   for (var b = 0; b + cerceve <= x.length; b += cerceve) {
@@ -284,7 +284,7 @@ function wavSessizMi(bayt) {
   return sessizMi(x, 16000);
 }
 // Sayfa sürümü (üretici yerleştirir: v<no>-<şablon özeti>); sayfada küçük yazıyla görünür ve konusmaci.csv'ye 'surum' olarak yazılır
-var SAYFA_SURUMU = "v1-6d7b665c";
+var SAYFA_SURUMU = "v1-7c525da7";
 // ?kod korunur: adreste kod yoksa kullanılan kod eklenir (otomatik kod başka tarayıcıda aynı kalsın). Çocuk (?cocuk=1) ve ?kisa=1 aynen kalır; # kısmı atılır.
 function adresKodlu(href, kod) {
   var h = String(href || "").split("#")[0];
