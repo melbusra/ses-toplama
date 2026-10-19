@@ -56,6 +56,13 @@ a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;backgroun
 
 <section id="hata" class="kart uyari gizli"></section>
 
+<section id="bastanOnay" class="kart gizli" role="alertdialog" aria-labelledby="bastanBaslik">
+  <p id="bastanBaslik" class="uyari" style="font-size:1.25rem"><b>Önceki kayıtlar bu telefondan silinecek, emin misin?</b></p>
+  <p class="kucuk">Yalnızca bu tarayıcıdaki kayıtlarınız ve ilerlemeniz silinir; kodunuz (<b id="bastanKod"></b>) aynı kalır. Daha önce gönderdiğiniz dosyalar etkilenmez.</p>
+  <button class="ana" id="bastanEvet" style="width:100%">Evet, sil ve baştan başla</button>
+  <button id="bastanHayir" style="width:100%;margin-top:8px">Vazgeç</button>
+</section>
+
 <section id="onay" class="kart gizli">
   <p><b>Katılım onayı</b></p>
   <p id="onayCocuk" class="gizli">Bu kayıtlar <b>çocuğunuzun sesidir</b> ve yalnızca bu tez çalışması için kullanılacaktır (etik kurul onaylı çalışma; veli izni gereklidir). Kayıtlar telefonunuzun
@@ -123,6 +130,7 @@ a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;backgroun
     </div>
     <div id="indirHata" class="uyari gizli" role="alert"></div>
     <div class="satir"><button id="sil" class="kucuk">Tüm kayıtlarımı bu telefondan sil</button></div>
+    <div class="satir"><button id="bastan" class="kucuk">Baştan başla</button></div>
   </div>
 </section>
 <p class="kucuk" id="surumNot" style="text-align:center;opacity:.6"></p>
@@ -300,7 +308,7 @@ function wavSessizMi(bayt) {
   return sessizMi(x, 16000);
 }
 // Sayfa sürümü (üretici yerleştirir: v<no>-<şablon özeti>); sayfada küçük yazıyla görünür ve konusmaci.csv'ye 'surum' olarak yazılır
-var SAYFA_SURUMU = "v4-528ebd5a", SAYFA_V = "4";
+var SAYFA_SURUMU = "v5-1670b82d", SAYFA_V = "5";
 // ?kod korunur: adreste kod yoksa kullanılan kod eklenir (otomatik kod başka tarayıcıda aynı kalsın). Çocuk (?cocuk=1) ve ?kisa=1 aynen kalır; # kısmı atılır.
 // ekler: {kisa: true -> ?kisa=1 yoksa eklenir; v: "3" -> ?v= eklenir/güncellenir (taze sayfa)}. Çocuk sürümünde ?cocuk=1 adreste zaten vardır ve aynen kalır.
 function adresKodlu(href, kod, ekler) {
@@ -464,6 +472,14 @@ function hataMetni(e) {
   if (e === null || e === undefined) return "bilinmeyen hata";
   var ad = e.name || "Hata", ileti = e.message || String(e);
   return ad + ": " + ileti;
+}
+// ?yeni=1: açılışta "baştan başla" onayı sorulur (bu kodun kayıtları ve ilerlemesi bu tarayıcıdan silinir; kod aynı kalır).
+function yeniIstendi(arama) { return /[?&]yeni=1(?:[&#]|$)/.test(arama || ""); }
+// Adresten yalnızca yeni=1 çıkarılır (sayfa yenilenince onay yeniden sorulmasın); kod, ses, cocuk, kisa, v ve # kısmı aynen kalır.
+function adresYenisiz(href) {
+  var s = String(href || ""), i = s.indexOf("#"), ek = i >= 0 ? s.slice(i) : "", g = i >= 0 ? s.slice(0, i) : s;
+  g = g.replace(/([?&])yeni=1(?:&|$)/, function (m, ayrac) { return m.charAt(m.length - 1) === "&" ? ayrac : ""; }).replace(/[?&]$/, "");
+  return g + ek;
 }
 // ==SAF-BITIR==
 
@@ -631,7 +647,7 @@ function hataMetni(e) {
   var simdiki = function () { return durum.liste[durum.idx]; };
   var kayitli = function (m) { return !!durum.kayitlar[m.dosya]; };
   function goster(ekran) {
-    ["hata", "onay", "mikTest", "kayitEkrani"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
+    ["hata", "onay", "mikTest", "kayitEkrani", "bastanOnay"].forEach(function (id) { el(id).classList.toggle("gizli", id !== ekran); });
   }
   function hata(metin) { el("hata").textContent = metin; goster("hata"); }
   function ciz() {
@@ -773,6 +789,27 @@ function hataMetni(e) {
     hepsiniSil().then(function () { durum.kayitlar = {}; zipPlanla(); durum.idx = 0; silOnay = false; el("sil").textContent = "Tüm kayıtlarımı bu telefondan sil"; say("Bu telefondaki tüm kayıtlar silindi."); ciz(); });
   }
 
+  // ---------- Baştan başla: yalnızca BU kodun (ve sesin) bu tarayıcıdaki kayıtları + ilerlemesi silinir; kod, adres ve diğer kodların verisi korunur
+  var bastanGeri = null;
+  function bastanSor(geri) { bastanGeri = geri; el("bastanKod").textContent = kod; goster("bastanOnay"); }
+  function adresiYenisizYap() {
+    try { if (window.history && window.history.replaceState) window.history.replaceState(null, "", adresYenisiz(location.href)); } catch (e) { /* yok say */ }
+  }
+  function bastanSilVeSifirla() {
+    return kayitlariOku().then(function (k) {
+      return Promise.all(Object.keys(k).map(function (ad) { return dbIslem("readwrite", function (st) { return st["delete"](depoKod + "/" + ad); }); }));
+    }).then(function () {
+      try { localStorage.removeItem(depoAnahtar); } catch (e) { /* yok say */ }
+      mikSifirla();
+      durum.kayitlar = {}; durum.idx = 0; durum.kabul = false; durum.yas = ""; durum.cinsiyet = ""; durum.mikTestGecti = false; durum.zip = null;
+      zipPlanla();
+      el("kabul").checked = false; el("yetiskinKutu").checked = false; el("veliKutu").checked = false; el("basla").disabled = true;
+      el("yas").value = ""; el("cinsiyet").value = ""; el("testDevam").disabled = true;
+      say(""); sessizKutu("");
+      goster("onay");
+    });
+  }
+
   function kayitEkraninaGec() {
     goster("kayitEkrani");
     var ilk = durum.liste.findIndex(function (m) { return !kayitli(m); });
@@ -811,7 +848,14 @@ function hataMetni(e) {
       if (sessizler.length) sessizKutu(sessizler.length + " kayıt sessiz çıkmıştı; eksik sayıldı. Aynı linkle yalnızca onları yeniden kaydedin.");
       zipPlanla();
       var onceki = ilerlemeOku();
-      if (onceki && onceki.kabul) { durum.kabul = true; durum.yas = onceki.yas || ""; durum.cinsiyet = onceki.cinsiyet || ""; mikTestEkrani(); } else goster("onay");
+      var devam = function () {
+        if (onceki && onceki.kabul) { durum.kabul = true; durum.yas = onceki.yas || ""; durum.cinsiyet = onceki.cinsiyet || ""; mikTestEkrani(); } else goster("onay");
+      };
+      if (yeniIstendi(location.search)) {        // ?yeni=1: silinecek bir şey varsa aynı onay sorulur (yoksa sessizce devam); adres temizlenir, yenilemede tekrar sorulmaz
+        adresiYenisizYap();
+        if (Object.keys(durum.kayitlar).length || onceki) { bastanSor(devam); return; }
+      }
+      devam();
     });
     var ozelKutu = function () { return el(cocukModu ? "veliKutu" : "yetiskinKutu"); };   // zorunlu özel onay: çocukta veli, yetişkinde 18+
     var onayGuncelle = function () { el("basla").disabled = !baslayabilir(el("kabul").checked, ozelKutu().checked); };
@@ -826,6 +870,9 @@ function hataMetni(e) {
     el("kaydet").addEventListener("click", kaydetTikla); el("dinle").addEventListener("click", dinle); el("yeniden").addEventListener("click", yeniden);
     el("onceki").addEventListener("click", function () { git(-1); }); el("sonraki").addEventListener("click", function () { git(1); });
     el("indir").addEventListener("click", indir); el("gonder").addEventListener("click", gonder); el("sil").addEventListener("click", sil);
+    el("bastan").addEventListener("click", function () { bastanSor(function () { goster("kayitEkrani"); ciz(); }); });
+    el("bastanEvet").addEventListener("click", function () { bastanSilVeSifirla(); });
+    el("bastanHayir").addEventListener("click", function () { var g = bastanGeri; bastanGeri = null; if (g) g(); });
     var iab = uygulamaIciTarayici(navigator.userAgent);
     chromeBagla();
     if (iab) { el("iabUyari").classList.remove("gizli"); el("iabIndirNot").classList.remove("gizli"); }     // açılışta, ilk kayıttan ÖNCE; kayda yine izin var, uyarı ekranda kalır
