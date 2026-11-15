@@ -7,8 +7,8 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; media-src blob:; img-src data:; connect-src 'none'; form-action 'none'; base-uri 'none'">
 <title>Ses kaydı toplama</title>
 <style>
-:root{color-scheme:light dark;--bg:#fafafa;--fg:#1c1c1c;--kart:#fff;--cizgi:#d6d6d6;--vurgu:#1a5fb4;--vurgu-yazi:#fff;--iyi:#1e8449;--kotu:#c0392b}
-@media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--kart:#222;--cizgi:#444;--vurgu:#62a0ea;--vurgu-yazi:#111;--iyi:#57e389;--kotu:#ff7b63}}
+:root{color-scheme:light dark;--bg:#fafafa;--fg:#1c1c1c;--kart:#fff;--cizgi:#d6d6d6;--vurgu:#1a5fb4;--vurgu-yazi:#fff;--iyi:#1e8449;--iyi-yazi:#fff;--kotu:#c0392b}
+@media (prefers-color-scheme:dark){:root{--bg:#161616;--fg:#eee;--kart:#222;--cizgi:#444;--vurgu:#62a0ea;--vurgu-yazi:#111;--iyi:#57e389;--iyi-yazi:#111;--kotu:#ff7b63}}
 *{box-sizing:border-box}
 body{margin:0;background:var(--bg);color:var(--fg);font:17px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
 main{max-width:34rem;margin:0 auto;padding:16px}
@@ -33,6 +33,9 @@ progress{width:100%;height:14px}
 .kucuk{font-size:.9rem;opacity:.8}
 #seviye{height:8px;background:var(--cizgi);border-radius:4px;overflow:hidden;margin:10px 0}
 #seviye>div{height:100%;width:0;background:var(--iyi)}
+.sinyal{text-align:center;font-size:1.7rem;font-weight:800;padding:.45em .3em;border-radius:12px;margin:8px 0}
+.sinyal.bekle{background:var(--cizgi);color:var(--fg)}
+.sinyal.iyi{background:var(--iyi);color:var(--iyi-yazi)}
 .uyari{color:var(--kotu);font-weight:600}
 a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;background:var(--vurgu);color:var(--vurgu-yazi);font-weight:700;font-size:1.25rem;text-decoration:none;min-height:56px;box-sizing:border-box}
 </style>
@@ -107,6 +110,7 @@ a.buyuk{display:block;text-align:center;padding:1em;border-radius:12px;backgroun
     <div id="talimat"></div>
     <div id="soylenecek"></div>
     <div id="seviye"><div></div></div>
+    <div id="sinyal" class="sinyal gizli" role="status" aria-live="assertive"></div>
     <div class="satir">
       <button id="kaydet" class="kayit">● Kaydet</button>
       <button id="dinle" disabled>▶ Dinle</button>
@@ -327,6 +331,14 @@ function konusmaEtkinligiSn(x, hz) {
   return etkin / hz;
 }
 function sessizMi(x, hz) { return tepeDb(x) < SESSIZ_TEPE_DB || konusmaEtkinligiSn(x, hz) < EN_AZ_KONUSMA_SN; }
+// Kayıt ekranı: düğmeye basınca kayıt hemen başlar; ilk HAZIR_MS "Hazır…" gösterilir, sonra yeşil "Şimdi söyle". Bu pencerede (yazı yeşile dönmeden) toplam ERKEN_SN'den fazla
+// konuşma etkinliği olursa "çok erken" uyarısı verilir ve o kayıt saklanmaz. Pencere SÜREYE göre değil alınan ÖRNEK sayısına göre ölçülür (blok gecikmesinden etkilenmez).
+var HAZIR_MS = 500, ERKEN_SN = 0.1;
+function erkenKonusmaSn(parca, onceki, hz) {      // parca: yeni gelen blok; onceki: bu bloktan önce alınan örnek sayısı; dönüş: bloğun pencereye düşen kısmındaki konuşma etkinliği (sn)
+  var pencere = Math.round(hz * HAZIR_MS / 1000);
+  if (onceki >= pencere) return 0;
+  return konusmaEtkinligiSn(parca.subarray(0, Math.min(parca.length, pencere - onceki)), hz);
+}
 // Saklanmış WAV baytlarından (wavKodla çıktısı: 44 bayt başlık + 16 bit mono) sessizlik denetimi
 function wavSessizMi(bayt) {
   var dv = new DataView(bayt.buffer, bayt.byteOffset, bayt.byteLength), n = Math.max(0, (bayt.byteLength - 44) >> 1), x = new Float32Array(n);
@@ -334,7 +346,7 @@ function wavSessizMi(bayt) {
   return sessizMi(x, 16000);
 }
 // Sayfa sürümü (üretici yerleştirir: v<no>-<şablon özeti>); sayfada küçük yazıyla görünür ve konusmaci.csv'ye 'surum' olarak yazılır
-var SAYFA_SURUMU = "v5-9f153373", SAYFA_V = "5";
+var SAYFA_SURUMU = "v5-79ce32ed", SAYFA_V = "5";
 // ?kod korunur: adreste kod yoksa kullanılan kod eklenir (otomatik kod başka tarayıcıda aynı kalsın). Çocuk (?cocuk=1) ve ?kisa=1 aynen kalır; # kısmı atılır.
 // ekler: {kisa: true -> ?kisa=1 yoksa eklenir; v: "3" -> ?v= eklenir/güncellenir (taze sayfa)}. Çocuk sürümünde ?cocuk=1 adreste zaten vardır ve aynen kalır.
 function adresKodlu(href, kod, ekler) {
@@ -586,7 +598,7 @@ function adresYenisiz(href) {
   }
 
   // ---------- mikrofon
-  var mik = {akim: null, ctx: null, isleyici: null, parcalar: [], kaydediyor: false, hz: 0, test: false, testSn: 0, sessizArdisik: 0};
+  var mik = {akim: null, ctx: null, isleyici: null, parcalar: [], kaydediyor: false, aciliyor: false, toplamOrnek: 0, erkenSn: 0, hz: 0, test: false, testSn: 0, sessizArdisik: 0};
   // Akımı bırak: izler durdurulur, işleyici ayrılır; bir sonraki mikAc() mikrofonu getUserMedia ile yeniden açar
   function mikSifirla() {
     try { if (mik.akim) mik.akim.getTracks().forEach(function (t) { t.onended = null; t.onmute = null; t.stop(); }); } catch (e) { /* yok say */ }
@@ -608,7 +620,11 @@ function adresYenisiz(href) {
           var g = e.inputBuffer.getChannelData(0), kopya = new Float32Array(g);
           var t = 0; for (var i = 0; i < kopya.length; i++) { var a = Math.abs(kopya[i]); if (a > t) t = a; }
           var yuzde = Math.min(100, Math.round(t * 140));
-          if (mik.kaydediyor) { mik.parcalar.push(kopya); el("seviye").firstChild.style.width = yuzde + "%"; }
+          if (mik.kaydediyor) {
+            mik.parcalar.push(kopya); el("seviye").firstChild.style.width = yuzde + "%";
+            mik.erkenSn += erkenKonusmaSn(kopya, mik.toplamOrnek, mik.hz); mik.toplamOrnek += kopya.length;
+            if (mik.erkenSn > ERKEN_SN) erkenIptal();                      // yazı yeşil olmadan konuşuldu
+          }
           if (mik.test) {
             el("testSeviye").value = yuzde;
             mik.testSn += konusmaEtkinligiSn(kopya, mik.hz);
@@ -692,7 +708,7 @@ function adresYenisiz(href) {
     var kaydediyor = mik.kaydediyor;   // kayıt sürerken gezinme ve dinleme kapalı
     el("dinle").disabled = !var_ || kaydediyor; el("yeniden").disabled = !var_ || kaydediyor;
     el("sonraki").disabled = !var_ || kaydediyor || durum.idx >= durum.liste.length - 1;
-    el("onceki").disabled = durum.idx === 0 || kaydediyor; el("kaydet").disabled = false;
+    el("onceki").disabled = durum.idx === 0 || kaydediyor; el("kaydet").disabled = mik.aciliyor;
     el("kaydet").textContent = mik.kaydediyor ? "■ Durdur" : (var_ ? "● Yeniden kaydet" : "● Kaydet");
     el("indirNot").textContent = tamam === durum.liste.length ? "Tüm kayıtlar tamam. İndirip zip dosyasını araştırmacıya iletin."
       : "Şu an " + tamam + " / " + durum.liste.length + " kayıt var; eksikle de indirebilirsiniz (kaldığınız yerden devam edebilirsiniz).";
@@ -702,18 +718,44 @@ function adresYenisiz(href) {
   function say(metin) { el("durum").textContent = metin || ""; }
 
   function sessizKutu(metin) { var k = el("sessizKutu"); k.textContent = metin || ""; k.classList.toggle("gizli", !metin); }
+  var hazirZaman = null;
+  // Kayıt ekranındaki büyük işaret: "Mikrofon açılıyor…" / "Hazır…" (gri) / "Şimdi söyle" (yeşil); metin boşsa gizlenir
+  function sinyal(metin, sinif) {
+    var s = el("sinyal");
+    s.textContent = metin || "";
+    s.classList.remove("bekle"); s.classList.remove("iyi");
+    s.classList.toggle("gizli", !metin);
+    if (metin) s.classList.add(sinif);
+  }
   function kaydetTikla() {
+    if (mik.aciliyor) return;                                       // mikrofon açılırken ikinci basış yok sayılır
     if (mik.kaydediyor) { durdur(); return; }
     if (!durum.mikTestGecti) { mikTestEkrani(); return; }          // mikrofon testi geçilmeden kayda başlanamaz
-    say("Mikrofon denetleniyor…");
-    mikAc().then(function () { mik.parcalar = []; mik.kaydediyor = true; say("Kaydediliyor… söyleyin, sonra Durdur'a basın."); ciz(); })
-      .catch(function (e) {
-        say("Mikrofon açılamadı: izin verdiğinizden emin olun (Ayarlar → tarayıcı → Mikrofon). Sayfa güvenli (https) bağlantıyla açılmış olmalı.");
-        void e;
-      });
+    sessizKutu(""); say("");
+    mik.aciliyor = true; sinyal("Mikrofon açılıyor…", "bekle"); ciz();
+    mikAc().then(function () {
+      mik.parcalar = []; mik.toplamOrnek = 0; mik.erkenSn = 0; mik.aciliyor = false; mik.kaydediyor = true;   // kayıt mikrofon açılır açılmaz başlar
+      sinyal("Hazır…", "bekle");
+      say("Kaydediliyor… yazı yeşil olunca söyleyin, bitince Durdur'a basın.");
+      clearTimeout(hazirZaman);
+      hazirZaman = setTimeout(function () { if (mik.kaydediyor) sinyal("Şimdi söyle", "iyi"); }, HAZIR_MS);
+      ciz();
+    }).catch(function (e) {
+      mik.aciliyor = false; sinyal("");
+      say("Mikrofon açılamadı: izin verdiğinizden emin olun (Ayarlar → tarayıcı → Mikrofon). Sayfa güvenli (https) bağlantıyla açılmış olmalı.");
+      ciz();
+      void e;
+    });
+  }
+  // Yazı yeşile dönmeden konuşuldu: kayıt iptal edilir (saklanmaz), kullanıcı uyarılır
+  function erkenIptal() {
+    mik.kaydediyor = false; mik.parcalar = []; clearTimeout(hazirZaman);
+    mikSifirla(); sinyal(""); say("");
+    sessizKutu("Çok erken başladınız. Kaydet'e basın, yazı yeşil \"Şimdi söyle\" olunca söyleyin.");
+    ciz();
   }
   function durdur() {
-    mik.kaydediyor = false;
+    mik.kaydediyor = false; clearTimeout(hazirZaman); sinyal("");
     var ham = birlestir(mik.parcalar), x = yenidenOrnekle(ham, mik.hz, HEDEF_HZ), m = simdiki();
     mikSifirla();                                                     // kayıt bitti: izleri durdur (bir sonraki kayıtta mikrofon yeniden açılır)
     if (x.length < HEDEF_HZ * 0.3) { say("Kayıt çok kısa; yeniden alın."); ciz(); return; }
